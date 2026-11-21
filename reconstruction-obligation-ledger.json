@@ -1,0 +1,191 @@
+{
+  "evidence_bundle": {
+    "artifacts": [],
+    "providers": [],
+    "environments": [],
+    "scenarios": [],
+    "captures": [],
+    "unknowns": [],
+    "records": [
+      {
+        "evidence_id": "ev_699bbeac8617fbcda43bbbaf458b9267fe105d1d3ba63ee954efcae944ad9755",
+        "predicate_type": "rea.javascript-application-analysis",
+        "subject": {
+          "name": "xpui",
+          "format": "directory"
+        },
+        "provider": {
+          "id": "rea-javascript-application",
+          "name": "REA JavaScript application analyzer",
+          "version": "1"
+        },
+        "analysis_profile": {
+          "provider": {
+            "id": "rea-javascript-application"
+          },
+          "parameters": {},
+          "digest": "profile_default"
+        },
+        "operation": "analyze_javascript_application",
+        "parameters": {},
+        "raw_result": {},
+        "normalized_result": {},
+        "confidence": "derived",
+        "authority": "shipped-artifact",
+        "environment": {
+          "id": "env_local",
+          "platform": "win32",
+          "architecture": "x64",
+          "isolation": "none"
+        },
+        "limitations": [],
+        "relationship_coverage": {
+          "status": "partial"
+        },
+        "locations": [],
+        "evidence_links": []
+      }
+    ]
+  },
+  "reviewed_obligations": [
+    {
+      "obligation_id": "spotify.track.schema-contract",
+      "obligation_version": 1,
+      "title": "Adhere to Spotify Track Entity schema recovered from search & playlist routes",
+      "application_layer": "application",
+      "family": "schema-conformance",
+      "target": {
+        "artifact_sha256": null,
+        "application_node_id": null,
+        "semantic_node_id": null,
+        "location": "src/types/spotify.ts"
+      },
+      "required": true,
+      "required_case_kinds": ["positive", "malformed"],
+      "required_original_authority": "static",
+      "required_fixture_authority": "unit",
+      "required_verifier_authority": "unit",
+      "requires_parser_type": true,
+      "dependency_obligation_ids": [],
+      "residual_unknown_ids": [],
+      "unavailable_authority": [],
+      "required_next_evidence": [],
+      "disposition": "active",
+      "review_evidence_ids": [
+        "ev_699bbeac8617fbcda43bbbaf458b9267fe105d1d3ba63ee954efcae944ad9755"
+      ]
+    },
+    {
+      "obligation_id": "spotify.player.state-machine",
+      "obligation_version": 1,
+      "title": "Implement usePlayContextItem hook with triggerPlay, togglePlay, isPlaying, and isActive semantics",
+      "application_layer": "application",
+      "family": "playback-control",
+      "target": {
+        "artifact_sha256": null,
+        "application_node_id": null,
+        "semantic_node_id": null,
+        "location": "src/hooks/usePlayContextItem.ts"
+      },
+      "required": true,
+      "required_case_kinds": ["positive", "negative"],
+      "required_original_authority": "static",
+      "required_fixture_authority": "unit",
+      "required_verifier_authority": "unit",
+      "requires_parser_type": false,
+      "dependency_obligation_ids": ["spotify.track.schema-contract"],
+      "residual_unknown_ids": [],
+      "unavailable_authority": [],
+      "required_next_evidence": [],
+      "disposition": "active",
+      "review_evidence_ids": [
+        "ev_699bbeac8617fbcda43bbbaf458b9267fe105d1d3ba63ee954efcae944ad9755"
+      ]
+    },
+    {
+      "obligation_id": "spotify.search.debounce-and-filter",
+      "obligation_version": 1,
+      "title": "Implement search query with 200ms debounce and chip category filtering",
+      "application_layer": "application",
+      "family": "search-curation",
+      "target": {
+        "artifact_sha256": null,
+        "application_node_id": null,
+        "semantic_node_id": null,
+        "location": "src/components/Search/SearchRoute.tsx"
+      },
+      "required": true,
+      "required_case_kinds": ["positive", "negative"],
+      "required_original_authority": "static",
+      "required_fixture_authority": "unit",
+      "required_verifier_authority": "unit",
+      "requires_parser_type": false,
+      "dependency_obligation_ids": ["spotify.track.schema-contract"],
+      "residual_unknown_ids": [],
+      "unavailable_authority": [],
+      "required_next_evidence": [],
+      "disposition": "active",
+      "review_evidence_ids": [
+        "ev_699bbeac8617fbcda43bbbaf458b9267fe105d1d3ba63ee954efcae944ad9755"
+      ]
+    },
+    {
+      "obligation_id": "spotify.playlist.columns-matrix",
+      "obligation_version": 1,
+      "title": "Support multi-column tracklist layout: INDEX, TITLE_AND_ARTIST, ALBUM, ADDED_AT, DURATION",
+      "application_layer": "application",
+      "family": "table-presentation",
+      "target": {
+        "artifact_sha256": null,
+        "application_node_id": null,
+        "semantic_node_id": null,
+        "location": "src/components/Playlist/PlaylistTrackTable.tsx"
+      },
+      "required": true,
+      "required_case_kinds": ["positive", "negative"],
+      "required_original_authority": "static",
+      "required_fixture_authority": "unit",
+      "required_verifier_authority": "unit",
+      "requires_parser_type": false,
+      "dependency_obligation_ids": ["spotify.track.schema-contract"],
+      "residual_unknown_ids": [],
+      "unavailable_authority": [],
+      "required_next_evidence": [],
+      "disposition": "active",
+      "review_evidence_ids": [
+        "ev_699bbeac8617fbcda43bbbaf458b9267fe105d1d3ba63ee954efcae944ad9755"
+      ]
+    },
+    {
+      "obligation_id": "spotify.ui.encore-dark-theme",
+      "obligation_version": 1,
+      "title": "Implement Spotify Encore dark theme color palette and layout boundaries",
+      "application_layer": "application",
+      "family": "styling",
+      "target": {
+        "artifact_sha256": null,
+        "application_node_id": null,
+        "semantic_node_id": null,
+        "location": "src/styles/encore.css"
+      },
+      "required": true,
+      "required_case_kinds": ["positive", "negative"],
+      "required_original_authority": "static",
+      "required_fixture_authority": "unit",
+      "required_verifier_authority": "unit",
+      "requires_parser_type": false,
+      "dependency_obligation_ids": [],
+      "residual_unknown_ids": [],
+      "unavailable_authority": [],
+      "required_next_evidence": [],
+      "disposition": "active",
+      "review_evidence_ids": [
+        "ev_699bbeac8617fbcda43bbbaf458b9267fe105d1d3ba63ee954efcae944ad9755"
+      ]
+    }
+  ],
+  "manifest": {
+    "bindings": [],
+    "contradictions": []
+  }
+}

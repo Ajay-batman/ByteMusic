@@ -1,0 +1,24 @@
+{
+  "name": "ByteMusic",
+  "short_name": "ByteMusic",
+  "description": "ByteMusic Clean-Room Audio Streaming Player for Web & Android",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "orientation": "portrait",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/spotify.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ]
+}
