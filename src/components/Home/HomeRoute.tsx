@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { mockPlaylists, mockTracks } from '../../data/mockSpotifyCatalog';
 import { Playlist, Track } from '../../types/spotify';
-import { Play, Moon, Sparkles } from 'lucide-react';
+import { Play, Moon, Sparkles, Server } from 'lucide-react';
 import { usePlayContextItem } from '../../hooks/usePlayContextItem';
 import { useTheme } from '../../context/ThemeContext';
+import { ServerSettingsModal } from '../Common/ServerSettingsModal';
 
 interface HomeRouteProps {
   onSelectPlaylist: (playlist: Playlist) => void;
@@ -11,14 +12,24 @@ interface HomeRouteProps {
 
 export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist }) => {
   const { isLiquidGlass, toggleTheme } = useTheme();
+  const [isServerModalOpen, setIsServerModalOpen] = useState(false);
 
   return (
     <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6 sm:space-y-8">
       {/* Greeting Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Good afternoon</h1>
-        {/* Mobile Quick Theme Switcher */}
-        <div className="md:hidden flex items-center">
+        {/* Mobile Quick Controls: Server Settings & Theme */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsServerModalOpen(true)}
+            title="Backend Server Connection"
+            className={`p-2 rounded-full text-xs font-semibold flex items-center justify-center transition-all ${
+              isLiquidGlass ? 'glass-pill text-white shadow-sm' : 'bg-[#282828] text-[#b3b3b3] hover:text-white'
+            }`}
+          >
+            <Server size={14} className="text-[#1db954]" />
+          </button>
           <button
             onClick={toggleTheme}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
@@ -92,6 +103,11 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist }) => {
           ))}
         </div>
       </div>
+
+      <ServerSettingsModal
+        isOpen={isServerModalOpen}
+        onClose={() => setIsServerModalOpen(false)}
+      />
     </div>
   );
 };

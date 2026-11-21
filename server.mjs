@@ -37,6 +37,13 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
+  // API: /api/health
+  if (url.pathname === '/api/health') {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ status: 'ok', service: 'ByteMusic Server', timestamp: Date.now() }));
+    return;
+  }
+
   // API: /api/library
   if (url.pathname === '/api/library') {
     res.setHeader('Content-Type', 'application/json');
@@ -260,7 +267,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Spotify Standalone Server] Listening at http://0.0.0.0:${PORT}`);
 });

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: bytemusic-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node server.mjs
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
