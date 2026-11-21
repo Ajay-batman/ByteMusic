@@ -345,25 +345,6 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [currentTrack, isPlaying, durationMs, progressMs, handleNextTrackInternal, handlePrevTrackInternal]);
 
-  // Listen for Native Android Lock Screen & Notification Action Commands
-  useEffect(() => {
-    const handleNativeMediaAction = (event: any) => {
-      const action = event?.detail;
-      if (action === 'toggle') {
-        togglePlay();
-      } else if (action === 'next') {
-        handleNextTrackInternal();
-      } else if (action === 'prev') {
-        handlePrevTrackInternal();
-      }
-    };
-
-    window.addEventListener('bytemusic-media-action', handleNativeMediaAction);
-    return () => {
-      window.removeEventListener('bytemusic-media-action', handleNativeMediaAction);
-    };
-  }, [togglePlay, handleNextTrackInternal, handlePrevTrackInternal]);
-
   // Master PlayTrack: Plays 100% FULL Song via YouTube IFrame Engine (or Offline Cache)
   const playTrackInternal = useCallback((track: Track, newQueue?: Track[]) => {
     if (newQueue && newQueue.length > 0) {
@@ -484,6 +465,25 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       playTrackInternal(currentTrackRef.current);
     }
   }, [isPlaying, playTrackInternal]);
+
+  // Listen for Native Android Lock Screen & Notification Action Commands
+  useEffect(() => {
+    const handleNativeMediaAction = (event: any) => {
+      const action = event?.detail;
+      if (action === 'toggle') {
+        togglePlay();
+      } else if (action === 'next') {
+        handleNextTrackInternal();
+      } else if (action === 'prev') {
+        handlePrevTrackInternal();
+      }
+    };
+
+    window.addEventListener('bytemusic-media-action', handleNativeMediaAction);
+    return () => {
+      window.removeEventListener('bytemusic-media-action', handleNativeMediaAction);
+    };
+  }, [togglePlay, handleNextTrackInternal, handlePrevTrackInternal]);
 
   const pause = useCallback(() => {
     pauseInternal();
