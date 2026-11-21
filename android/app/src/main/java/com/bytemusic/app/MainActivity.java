@@ -3,15 +3,19 @@ package com.bytemusic.app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    public static MainActivity instance;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        instance = this;
 
         // Start Foreground Background Audio Service
         try {
@@ -28,6 +32,25 @@ public class MainActivity extends BridgeActivity {
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
+
+            // Native Media Bridge: Syncs web playback state with Android Lock Screen & Notification
+            webView.addJavascriptInterface(new Object() {
+                @JavascriptInterface
+                public void updateMetadata(String title, String artist, String album, boolean isPlaying) {
+                    BackgroundAudioService.updateMedia(MainActivity.this, title, artist, album, isPlaying);
+                }
+            }, "NativeMediaBridge");
+        }
+    }
+
+    public static void dispatchMediaAction(String action) {
+        if (instance != null && instance.bridge != null && instance.bridge.getWebView() != null) {
+            instance.runOnUiThread(() -> {
+                instance.bridge.getWebView().evaluateJavascript(
+                    "window.dispatchEvent(new CustomEvent('bytemusic-media-action', { detail: '" + action + "' }));",
+                    null
+                );
+            });
         }
     }
 
@@ -64,6 +87,9 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (instance == this) {
+            instance = null;
+        }
         try {
             Intent serviceIntent = new Intent(this, BackgroundAudioService.class);
             stopService(serviceIntent);

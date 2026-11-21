@@ -7,6 +7,9 @@ declare global {
   interface Window {
     YT: any;
     onYouTubeIframeAPIReady: () => void;
+    NativeMediaBridge?: {
+      updateMetadata: (title: string, artist: string, album: string, isPlaying: boolean) => void;
+    };
   }
 }
 
@@ -326,8 +329,40 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           });
         } catch {}
       }
+      // Sync with Native Android MediaSession (Lock Screen & Notification Panel)
+      if (window.NativeMediaBridge && typeof window.NativeMediaBridge.updateMetadata === 'function') {
+        try {
+          window.NativeMediaBridge.updateMetadata(
+            currentTrack.name,
+            currentTrack.artists.map((a) => a.name).join(', '),
+            currentTrack.album.name,
+            isPlaying
+          );
+        } catch (e) {
+          console.warn('Failed to update native media bridge:', e);
+        }
+      }
     }
   }, [currentTrack, isPlaying, durationMs, progressMs, handleNextTrackInternal, handlePrevTrackInternal]);
+
+  // Listen for Native Android Lock Screen & Notification Action Commands
+  useEffect(() => {
+    const handleNativeMediaAction = (event: any) => {
+      const action = event?.detail;
+      if (action === 'toggle') {
+        togglePlay();
+      } else if (action === 'next') {
+        handleNextTrackInternal();
+      } else if (action === 'prev') {
+        handlePrevTrackInternal();
+      }
+    };
+
+    window.addEventListener('bytemusic-media-action', handleNativeMediaAction);
+    return () => {
+      window.removeEventListener('bytemusic-media-action', handleNativeMediaAction);
+    };
+  }, [togglePlay, handleNextTrackInternal, handlePrevTrackInternal]);
 
   // Master PlayTrack: Plays 100% FULL Song via YouTube IFrame Engine (or Offline Cache)
   const playTrackInternal = useCallback((track: Track, newQueue?: Track[]) => {
