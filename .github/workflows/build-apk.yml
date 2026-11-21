@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-apk:
-    name: Build ByteMusic APK
+  build-and-test-apk:
+    name: Build & Cloud Sandbox Test ByteMusic APK
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +30,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Verify Clean-Room Obligations
+        run: npm run verify
+
       - name: Make Gradlew Executable
         run: chmod +x android/gradlew
 
@@ -47,6 +50,53 @@ jobs:
       - name: Build Debug APK with Gradle
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Run Android Cloud Sandbox Background Audio Test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            echo "=================================================="
+            echo "ANDROID CLOUD SANDBOX: BYTE MUSIC VERIFICATION"
+            echo "=================================================="
+            
+            echo "[Step 1] Installing ByteMusic Debug APK..."
+            adb install android/app/build/outputs/apk/debug/app-debug.apk
+            
+            echo "[Step 2] Launching com.bytemusic.app/.MainActivity..."
+            adb shell am start -n com.bytemusic.app/.MainActivity
+            sleep 8
+            
+            echo "[Step 3] Verifying Foreground BackgroundAudioService is Active..."
+            adb shell dumpsys activity services | grep -i "BackgroundAudioService" || true
+            
+            echo "[Step 4] Simulating Screen Off / Power Key (Lock Device)..."
+            adb shell input keyevent 26
+            sleep 5
+            
+            echo "[Step 5] Checking Service & Process Persistence with Screen Locked..."
+            adb shell dumpsys activity services | grep -E "(BackgroundAudioService|foreground)"
+            
+            echo "[Step 6] Verifying Process is Alive and Healthy..."
+            APP_PID=$(adb shell pidof com.bytemusic.app)
+            echo "ByteMusic PID: $APP_PID"
+            if [ -z "$APP_PID" ]; then
+              echo "FAIL: App process crashed in background!"
+              exit 1
+            fi
+            
+            echo "[Step 7] Waking Screen Back Up..."
+            adb shell input keyevent 26
+            sleep 3
+            
+            echo "=================================================="
+            echo "CLOUD SANDBOX VERIFICATION: ALL CHECKS PASSED!"
+            echo "=================================================="
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4

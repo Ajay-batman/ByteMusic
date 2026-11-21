@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Track } from '../types/spotify';
-import { apiUrl } from '../config/api';
 
 interface DownloadContextType {
   downloadedTrackIds: Set<string>;
@@ -56,7 +55,7 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setDownloadingTrackIds((prev) => new Set(prev).add(track.id));
 
     try {
-      // 1. Resolve YouTube ID if not present
+      // 1. Resolve and cache YouTube ID locally
       let ytId = track.youtubeId;
       const artistName = track.artists[0]?.name || '';
       const cacheKey = `yt_id_${track.name}_${artistName}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -65,57 +64,21 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ytId = localStorage.getItem(cacheKey) || undefined;
       }
 
-      if (!ytId) {
-        const query = `${track.name} ${artistName}`;
-        const res = await fetch(apiUrl(`/api/resolve-yt?q=${encodeURIComponent(query)}`));
-        const data = await res.json();
-        if (data.videoId) {
-          ytId = data.videoId;
-          try {
-            localStorage.setItem(cacheKey, data.videoId);
-          } catch {}
-          track.youtubeId = data.videoId;
-        }
+      if (ytId) {
+        try {
+          localStorage.setItem(cacheKey, ytId);
+        } catch {}
       }
 
-      if (!ytId) {
-        throw new Error('Could not resolve audio stream for track: ' + track.name);
-      }
-
-      // 2. Prepare filename and download URL
-      const filename = `${artistName} - ${track.name}.m4a`.replace(/[\\/:*?"<>|]/g, '_');
-      const downloadUrl = apiUrl(`/api/download?id=${encodeURIComponent(ytId)}&filename=${encodeURIComponent(filename)}`);
-
-      // 3. Trigger immediate native browser/device file download
-      const anchor = document.createElement('a');
-      anchor.href = downloadUrl;
-      anchor.download = filename;
-      anchor.style.display = 'none';
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-
-      // 4. Cache audio stream in background for offline playback
-      if ('caches' in window) {
-        caches.open(CACHE_NAME).then(async (cache) => {
-          try {
-            const streamRes = await fetch(apiUrl(`/api/stream?id=${encodeURIComponent(ytId!)}`));
-            if (streamRes.ok) {
-              await cache.put(apiUrl(`/api/stream?id=${encodeURIComponent(ytId!)}`), streamRes);
-            }
-          } catch {}
-        });
-      }
-
-      // 5. Save metadata to localStorage for offline library display
+      // 2. Save metadata to localStorage for offline library display
       try {
         localStorage.setItem(`spotify_offline_meta_${track.id}`, JSON.stringify(track));
       } catch {}
 
-      // 6. Mark as downloaded
+      // 3. Mark as downloaded
       setDownloadedTrackIds((prev) => new Set(prev).add(track.id));
     } catch (err) {
-      console.error('Error downloading track:', err);
+      console.error('Error saving offline track:', err);
     } finally {
       setDownloadingTrackIds((prev) => {
         const next = new Set(prev);
@@ -127,15 +90,6 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeDownload = useCallback(async (track: Track) => {
     try {
-      const artistName = track.artists[0]?.name || '';
-      const cacheKey = `yt_id_${track.name}_${artistName}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      const ytId = track.youtubeId || localStorage.getItem(cacheKey);
-
-      if (ytId && 'caches' in window) {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.delete(apiUrl(`/api/stream?id=${encodeURIComponent(ytId)}`));
-      }
-
       localStorage.removeItem(`spotify_offline_meta_${track.id}`);
 
       setDownloadedTrackIds((prev) => {

@@ -11,6 +11,23 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ByteMusic" />
+    <script>
+      // Keep background audio active: override Page Visibility API
+      try {
+        Object.defineProperties(document, {
+          hidden: { value: false, writable: false },
+          visibilityState: { value: 'visible', writable: false },
+          webkitHidden: { value: false, writable: false },
+          webkitVisibilityState: { value: 'visible', writable: false },
+        });
+        if (typeof document.hasFocus === 'function') {
+          document.hasFocus = function() { return true; };
+        }
+        window.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);
+        document.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);
+        document.addEventListener('webkitvisibilitychange', function(e) { e.stopImmediatePropagation(); }, true);
+      } catch (e) {}
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>

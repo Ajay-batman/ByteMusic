@@ -43,6 +43,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const ytPlayerRef = useRef<any>(null);
   const isYtReadyRef = useRef<boolean>(false);
   const pendingVideoIdRef = useRef<string | null>(null);
+  const userIntentPlayingRef = useRef<boolean>(false);
   const currentTrackRef = useRef<Track | null>(mockTracks[0]);
   const queueRef = useRef<Track[]>(mockTracks);
   const repeatModeRef = useRef<'off' | 'all' | 'one'>(repeatMode);
@@ -69,6 +70,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const resumeInternal = () => {
+    userIntentPlayingRef.current = true;
     if (audioRef.current && audioRef.current.src && audioRef.current.paused) {
       audioRef.current.play().catch(() => {});
       setIsPlaying(true);
@@ -83,6 +85,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const pauseInternal = useCallback(() => {
+    userIntentPlayingRef.current = false;
     if (audioRef.current && !audioRef.current.paused) {
       audioRef.current.pause();
     }
@@ -181,14 +184,27 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             },
             onStateChange: (event: any) => {
               if (event.data === 1) { // PLAYING
+                userIntentPlayingRef.current = true;
                 setIsPlaying(true);
                 setIsLoading(false);
               } else if (event.data === 2) { // PAUSED
-                setIsPlaying(false);
+                if (userIntentPlayingRef.current) {
+                  // Involuntary pause caused by Android backgrounding/screen lock: auto-resume!
+                  setTimeout(() => {
+                    if (userIntentPlayingRef.current && ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
+                      try {
+                        ytPlayerRef.current.playVideo();
+                      } catch {}
+                    }
+                  }, 50);
+                } else {
+                  setIsPlaying(false);
+                }
               } else if (event.data === 3) { // BUFFERING
                 setIsLoading(true);
               } else if (event.data === 0) { // ENDED
                 setIsPlaying(false);
+                userIntentPlayingRef.current = false;
                 handleNextTrackInternal();
               }
             },
@@ -329,6 +345,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     const startPlayback = (ytId: string) => {
+      userIntentPlayingRef.current = true;
       if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
         ytPlayerRef.current.loadVideoById(ytId);
         ytPlayerRef.current.playVideo();
