@@ -11,7 +11,7 @@ const dataDir = path.resolve(__dirname, 'data');
 const libraryFile = path.resolve(dataDir, 'library.json');
 
 const ytInstance = new Ytdl({
-  clients: [Client.VisionOS, Client.Tv, Client.WebEmbedded],
+  clients: [Client.VisionOS],
 });
 const streamUrlCache = new Map(); // id -> { url, expireAt }
 
@@ -46,8 +46,8 @@ const server = http.createServer(async (req, res) => {
       JSON.stringify({
         status: 'ok',
         service: 'ByteMusic Server',
-        version: '1.1.0-visionos',
-        clients: ['visionos', 'tv'],
+        version: '1.2.0-pure-visionos',
+        clients: ['visionos'],
         timestamp: Date.now(),
       })
     );
