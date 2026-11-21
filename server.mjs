@@ -42,7 +42,15 @@ const server = http.createServer(async (req, res) => {
   // API: /api/health
   if (url.pathname === '/api/health') {
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ status: 'ok', service: 'ByteMusic Server', timestamp: Date.now() }));
+    res.end(
+      JSON.stringify({
+        status: 'ok',
+        service: 'ByteMusic Server',
+        version: '1.1.0-visionos',
+        clients: ['visionos', 'tv'],
+        timestamp: Date.now(),
+      })
+    );
     return;
   }
 
