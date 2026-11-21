@@ -1,8 +1,6 @@
 package com.bytemusic.app;
 
-import android.app.PictureInPictureParams;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.WebSettings;
@@ -34,16 +32,9 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onUserLeaveHint() {
-        super.onUserLeaveHint();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                PictureInPictureParams params = new PictureInPictureParams.Builder().build();
-                enterPictureInPictureMode(params);
-            } catch (Exception e) {
-                // Ignore if PiP is disabled or unsupported
-            }
-        }
+    public void onBackPressed() {
+        // Pure music app behavior: minimize to background instead of killing playback
+        moveTaskToBack(true);
     }
 
     @Override
