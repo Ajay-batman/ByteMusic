@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 
-export const DEFAULT_SERVER_URL = 'https://revelation-fin-comments-jesse.trycloudflare.com';
+export const DEFAULT_SERVER_URL = 'https://bytemusic.onrender.com';
 export const LOCAL_WIFI_URL = 'http://10.206.64.211:3000';
 
 /**

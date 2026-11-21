@@ -2,7 +2,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Ytdl } from '@distube/ytdl-core';
+import { Ytdl, Client } from '@distube/ytdl-core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,7 +10,9 @@ const distDir = path.resolve(__dirname, 'dist');
 const dataDir = path.resolve(__dirname, 'data');
 const libraryFile = path.resolve(dataDir, 'library.json');
 
-const ytInstance = new Ytdl();
+const ytInstance = new Ytdl({
+  clients: [Client.VisionOS, Client.Tv, Client.WebEmbedded],
+});
 const streamUrlCache = new Map(); // id -> { url, expireAt }
 
 const mimeTypes = {
