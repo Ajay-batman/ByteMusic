@@ -19,29 +19,29 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
 
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
       - name: Build Web Application
         run: npm run build
 
       - name: Sync Capacitor Android Project
-        run: npx cap sync android
-
-      - name: Make Gradlew Executable
-        working-directory: android
-        run: chmod +x gradlew
+        run: npm run cap:sync
 
       - name: Build Debug APK with Gradle
         working-directory: android
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
