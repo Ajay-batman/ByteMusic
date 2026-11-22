@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Search, Library, Plus, Heart, Clock, Music, X, Moon, Sparkles } from 'lucide-react';
+import { Home, Search, Library, Plus, Heart, Clock, Music, X, Palette } from 'lucide-react';
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Playlist } from '../../types/spotify';
@@ -18,7 +18,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   setSelectedPlaylist,
 }) => {
   const { allPlaylists, createPlaylist } = useLibrary();
-  const { theme, setTheme, isLiquidGlass } = useTheme();
+  const { isLiquidGlass, openThemeModal, currentThemeDef } = useTheme();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
 
@@ -67,37 +67,31 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           <span>Search</span>
         </button>
 
-        {/* Theme Switcher Pill */}
-        <div
-          className={`mt-1 p-1 rounded-xl flex items-center transition-all ${
-            isLiquidGlass ? 'glass-pill' : 'bg-[#1a1a1a] border border-[#2a2a2a]'
+        {/* Theme Styles Button */}
+        <button
+          onClick={openThemeModal}
+          title="Browse & switch theme styles"
+          className={`mt-1 p-2 rounded-xl flex items-center justify-between w-full transition-all text-xs font-semibold ${
+            isLiquidGlass ? 'glass-pill' : 'bg-[#1a1a1a] border border-[#2a2a2a] hover:bg-[#252525]'
           }`}
         >
-          <button
-            onClick={() => setTheme('dark')}
-            title="Switch to Spotify Classic Dark theme"
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              theme === 'dark'
-                ? 'bg-[#282828] text-white shadow-sm font-bold'
-                : 'text-[#909090] hover:text-white'
-            }`}
-          >
-            <Moon size={13} />
-            <span>Dark</span>
-          </button>
-          <button
-            onClick={() => setTheme('liquid-glass')}
-            title="Switch to Liquid Glass iPhone style theme"
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              theme === 'liquid-glass'
-                ? 'bg-gradient-to-r from-indigo-500/80 via-purple-500/80 to-pink-500/80 text-white shadow-md font-bold'
-                : 'text-[#909090] hover:text-white'
-            }`}
-          >
-            <Sparkles size={13} className={theme === 'liquid-glass' ? 'text-cyan-200 animate-pulse' : ''} />
-            <span>Liquid Glass</span>
-          </button>
-        </div>
+          <div className="flex items-center gap-2">
+            <Palette size={14} style={{ color: currentThemeDef.accentColor }} />
+            <span className="text-white font-medium">{currentThemeDef.name}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-[#b3b3b3] uppercase tracking-wider font-bold">Themes</span>
+            <div className="flex items-center -space-x-1">
+              {currentThemeDef.previewColors.map((c, i) => (
+                <span
+                  key={i}
+                  className="w-2.5 h-2.5 rounded-full border border-black/50"
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+        </button>
       </div>
 
       {/* Your Library Box */}

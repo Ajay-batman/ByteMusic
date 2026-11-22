@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { mockPlaylists, mockTracks } from '../../data/mockSpotifyCatalog';
 import { Playlist, Track } from '../../types/spotify';
-import { Play, Moon, Sparkles, Server } from 'lucide-react';
+import { Play, Palette, Server } from 'lucide-react';
 import { usePlayContextItem } from '../../hooks/usePlayContextItem';
 import { useTheme } from '../../context/ThemeContext';
 import { ServerSettingsModal } from '../Common/ServerSettingsModal';
@@ -11,7 +11,7 @@ interface HomeRouteProps {
 }
 
 export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist }) => {
-  const { isLiquidGlass, toggleTheme } = useTheme();
+  const { isLiquidGlass, openThemeModal, currentThemeDef } = useTheme();
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
 
   return (
@@ -31,22 +31,14 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist }) => {
             <Server size={14} className="text-[#1db954]" />
           </button>
           <button
-            onClick={toggleTheme}
+            onClick={openThemeModal}
+            title="Choose Theme Style"
             className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              isLiquidGlass ? 'glass-pill text-white shadow-sm' : 'bg-[#282828] text-white'
+              isLiquidGlass ? 'glass-pill text-white shadow-sm' : 'bg-[#282828] text-white hover:bg-[#333]'
             }`}
           >
-            {isLiquidGlass ? (
-              <>
-                <Sparkles size={13} className="text-cyan-300" />
-                <span>Liquid Glass</span>
-              </>
-            ) : (
-              <>
-                <Moon size={13} />
-                <span>Dark</span>
-              </>
-            )}
+            <Palette size={13} style={{ color: currentThemeDef.accentColor }} />
+            <span>{currentThemeDef.name}</span>
           </button>
         </div>
       </div>

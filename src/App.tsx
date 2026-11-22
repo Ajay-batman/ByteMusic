@@ -8,6 +8,7 @@ import { HomeRoute } from './components/Home/HomeRoute';
 import { BottomPlayerBar } from './components/Player/BottomPlayerBar';
 import { MobileBottomNav } from './components/Mobile/MobileBottomNav';
 import { MobileMiniPlayer } from './components/Mobile/MobileMiniPlayer';
+import { ThemePickerModal } from './components/Common/ThemePickerModal';
 import { Playlist } from './types/spotify';
 import { Loader2 } from 'lucide-react';
 
@@ -29,7 +30,7 @@ const AppContent: React.FC = () => {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('playlist-today-top-hits');
   const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
   const { allPlaylists, getPlaylistById } = useLibrary();
-  const { isLiquidGlass } = useTheme();
+  const { theme, isLiquidGlass } = useTheme();
 
   const selectedPlaylist = getPlaylistById(selectedPlaylistId) || allPlaylists[0];
 
@@ -38,21 +39,21 @@ const AppContent: React.FC = () => {
     setCurrentView('playlist');
   };
 
+  const themeBgClass =
+    theme === 'liquid-glass'
+      ? 'liquid-glass-bg text-white'
+      : theme === 'cyberpunk'
+      ? 'cyberpunk-bg text-white'
+      : theme === 'amoled'
+      ? 'amoled-bg text-white'
+      : theme === 'aurora'
+      ? 'aurora-bg text-white'
+      : 'bg-black text-white';
+
   return (
     <div
-      className={`flex flex-col h-screen w-screen font-sans overflow-hidden select-none transition-colors duration-500 relative ${
-        isLiquidGlass ? 'liquid-glass-bg text-white' : 'bg-black text-white'
-      }`}
+      className={`flex flex-col h-screen w-screen font-sans overflow-hidden select-none transition-colors duration-500 relative ${themeBgClass}`}
     >
-      {/* Dynamic Ambient Fluid Light Orbs for Liquid Glass Theme */}
-      {isLiquidGlass && (
-        <>
-          <div className="orb-float-1 fixed -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/25 blur-[100px] pointer-events-none z-0" />
-          <div className="orb-float-2 fixed -bottom-24 -right-24 w-[32rem] h-[32rem] rounded-full bg-pink-500/20 blur-[120px] pointer-events-none z-0" />
-          <div className="orb-float-1 fixed top-1/2 left-1/3 w-80 h-80 rounded-full bg-emerald-500/15 blur-[90px] pointer-events-none z-0" />
-        </>
-      )}
-
       {/* Main Work Area */}
       <div className={`flex flex-1 overflow-hidden p-2 gap-2.5 z-10 ${isLiquidGlass ? 'pb-2' : ''}`}>
         {/* Desktop Left Sidebar (Hidden on mobile) */}
@@ -101,6 +102,9 @@ const AppContent: React.FC = () => {
           <MobileNowPlaying onClose={() => setIsMobilePlayerOpen(false)} />
         </Suspense>
       )}
+
+      {/* Global Multi-Theme Picker Modal */}
+      <ThemePickerModal />
     </div>
   );
 };
