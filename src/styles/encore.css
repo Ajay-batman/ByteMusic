@@ -228,30 +228,39 @@ body {
 
 /* 5. Velvet & Lime Aesthetic Theme (Dribbble Aesthetic Dark UI) */
 .velvet-lime-bg {
-  background-color: #0b0b10;
+  background-color: #0b0b12 !important;
   background-image: 
-    radial-gradient(ellipse 70% 45% at 20% 0%, rgba(216, 180, 254, 0.14) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 85% 10%, rgba(249, 115, 22, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 60% at 50% 90%, rgba(210, 248, 67, 0.08) 0%, transparent 70%);
-  background-attachment: fixed;
+    /* Top-left intense violet-fuchsia flare radiating behind avatar down across header */
+    radial-gradient(circle 420px at 8% 4%, rgba(217, 70, 239, 0.46) 0%, rgba(168, 85, 247, 0.34) 28%, rgba(99, 102, 241, 0.18) 55%, transparent 75%),
+    /* Diagonal magenta light streak across header */
+    linear-gradient(135deg, rgba(236, 72, 153, 0.32) 0%, rgba(139, 92, 246, 0.18) 35%, transparent 60%),
+    /* Ambient bottom-right warm peach/amber/rose glow */
+    radial-gradient(circle 450px at 88% 92%, rgba(249, 115, 22, 0.14) 0%, rgba(236, 72, 153, 0.08) 40%, transparent 70%) !important;
+  background-attachment: fixed !important;
+}
+
+.theme-velvet-lime {
+  font-family: 'Plus Jakarta Sans', 'Urbanist', system-ui, -apple-system, sans-serif !important;
 }
 
 .theme-velvet-lime .glass-panel {
-  background: rgba(18, 18, 26, 0.92) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(18, 18, 26, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
 }
 
 .theme-velvet-lime .glass-card {
-  background: #14141d !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  background: rgba(22, 22, 33, 0.72) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 1.25rem !important;
 }
 
 .theme-velvet-lime .glass-card:hover {
-  background: #1c1c28 !important;
+  background: rgba(30, 30, 45, 0.85) !important;
   border-color: rgba(210, 248, 67, 0.45) !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 16px rgba(210, 248, 67, 0.12) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 16px rgba(210, 248, 67, 0.15) !important;
 }
 
 .theme-velvet-lime .glass-player {
@@ -264,6 +273,38 @@ body {
   background: rgba(255, 255, 255, 0.06) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: #ffffff !important;
+}
+
+/* Frosted 3D Glass Floating Dock (Dribbble Aesthetic Dock) */
+.frosted-3d-dock {
+  background: rgba(22, 23, 33, 0.72) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1.5px 0 rgba(0, 0, 0, 0.4),
+    0 20px 45px -8px rgba(0, 0, 0, 0.7),
+    0 0 1px 1px rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Frosted Glass Circular Buttons (Header & Player circular buttons) */
+.frosted-circle-btn {
+  background: rgba(255, 255, 255, 0.09) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.35), 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.frosted-circle-btn:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.frosted-circle-btn:active {
+  transform: scale(0.92) !important;
 }
 
 

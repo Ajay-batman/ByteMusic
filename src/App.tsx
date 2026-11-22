@@ -30,7 +30,7 @@ const AppContent: React.FC = () => {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('playlist-today-top-hits');
   const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
   const { allPlaylists, getPlaylistById } = useLibrary();
-  const { theme, isLiquidGlass } = useTheme();
+  const { theme, isLiquidGlass, isVelvetLime } = useTheme();
 
   const selectedPlaylist = getPlaylistById(selectedPlaylistId) || allPlaylists[0];
 
@@ -71,7 +71,11 @@ const AppContent: React.FC = () => {
         {/* Center Main Stage */}
         <main
           className={`flex-1 rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 pb-32 md:pb-0 ${
-            isLiquidGlass ? 'glass-panel' : 'bg-[#121212] rounded-lg'
+            isVelvetLime
+              ? 'bg-transparent'
+              : isLiquidGlass
+              ? 'glass-panel'
+              : 'bg-[#121212] rounded-lg'
           }`}
         >
           <Suspense fallback={<RouteLoadingFallback />}>

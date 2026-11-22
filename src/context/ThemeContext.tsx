@@ -88,7 +88,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return saved;
       }
     } catch {}
-    return 'dark';
+    return 'velvet-lime';
   });
 
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);

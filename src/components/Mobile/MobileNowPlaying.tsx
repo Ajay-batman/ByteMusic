@@ -7,6 +7,7 @@ import { DownloadButton } from '../Common/DownloadButton';
 import { AudioQuality } from '../../types/spotify';
 import {
   ChevronDown,
+  ChevronLeft,
   Play,
   Pause,
   SkipBack,
@@ -19,6 +20,7 @@ import {
   Check,
   Loader2,
   MoreVertical,
+  ListMusic,
 } from 'lucide-react';
 
 interface MobileNowPlayingProps {
@@ -39,19 +41,24 @@ function formatDuration(ms: number): string {
  */
 const NowPlayingProgressBar: React.FC<{ seek: (ms: number) => void }> = React.memo(({ seek }) => {
   const { progressMs, durationMs } = usePlaybackProgress();
+  const { isVelvetLime } = useTheme();
+  const remainingMs = Math.max(0, (durationMs || 0) - progressMs);
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 w-full">
       <LiquidGlassSlider
         value={progressMs}
         min={0}
         max={durationMs || 1}
         onChange={(newMs) => seek(newMs)}
         formatTooltip={(ms) => formatDuration(ms)}
+        accentColor={isVelvetLime ? '#D2F843' : undefined}
       />
-      <div className="flex items-center justify-between text-xs font-mono text-[#b3b3b3] px-1">
+      <div className={`flex items-center justify-between text-xs px-1 ${
+        isVelvetLime ? 'font-sans font-medium text-white/50' : 'font-mono text-[#b3b3b3]'
+      }`}>
         <span>{formatDuration(progressMs)}</span>
-        <span>{formatDuration(durationMs)}</span>
+        <span>{isVelvetLime ? `-${formatDuration(remainingMs)}` : formatDuration(durationMs)}</span>
       </div>
     </div>
   );
@@ -81,42 +88,86 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
   if (!currentTrack) return null;
 
   const liked = isLiked(currentTrack.id);
+  const albumCoverUrl = currentTrack.album.images[0]?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500';
 
   return (
     <div
-      className={`fixed inset-0 z-50 md:hidden flex flex-col justify-between p-6 select-none animate-in fade-in slide-in-from-bottom-10 duration-300 ${
+      className={`fixed inset-0 z-50 md:hidden flex flex-col justify-between p-6 select-none overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-300 ${
         isVelvetLime
-          ? 'velvet-lime-bg text-white'
+          ? 'bg-[#0B0B12] text-white'
           : isLiquidGlass
           ? 'liquid-glass-bg text-white'
           : 'bg-gradient-to-b from-[#3a3a3a] via-[#121212] to-black text-white'
       }`}
     >
-      {/* Top Bar: Collapse Chevron + Header */}
-      <div className="flex items-center justify-between pt-2">
-        <button
-          onClick={onClose}
-          className="p-2 text-white hover:opacity-75 transition-opacity"
-        >
-          <ChevronDown size={28} />
-        </button>
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] uppercase font-bold tracking-widest text-[#b3b3b3]">
-            {isVelvetLime ? 'NOW PLAYING' : 'PLAYING FROM PLAYLIST'}
-          </span>
-          <span className="text-xs font-bold text-white truncate max-w-[200px]">
-            {currentTrack.album.name}
-          </span>
+      {/* Dynamic Blurred Artwork Backdrop Behind Transparent Glass (Dribbble Screen 2) */}
+      {isVelvetLime && (
+        <div className="absolute top-0 left-0 right-0 h-[62%] overflow-hidden pointer-events-none z-0">
+          <div
+            className="w-full h-full bg-cover bg-center scale-125 filter blur-3xl opacity-60"
+            style={{
+              backgroundImage: `url(${albumCoverUrl})`,
+              maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)',
+            }}
+          />
+          {/* Transparent Frosted Smoked Glass Overlay */}
+          <div className="absolute inset-0 bg-[#0B0B12]/20 backdrop-blur-sm" />
         </div>
-        <button className="p-2 text-[#b3b3b3] hover:text-white transition-colors">
-          <MoreVertical size={20} />
-        </button>
+      )}
+
+      {/* Top Bar: Controls & Header (Z-10) */}
+      <div className="flex items-center justify-between pt-2 relative z-10">
+        {isVelvetLime ? (
+          <button
+            onClick={onClose}
+            className="frosted-circle-btn w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform"
+          >
+            <ChevronLeft size={22} />
+          </button>
+        ) : (
+          <button
+            onClick={onClose}
+            className="p-2 text-white hover:opacity-75 transition-opacity"
+          >
+            <ChevronDown size={28} />
+          </button>
+        )}
+
+        <div className="flex flex-col items-center">
+          <span className={`text-[11px] uppercase tracking-widest ${
+            isVelvetLime ? 'font-bold text-white/90 font-sans' : 'font-bold text-[#b3b3b3]'
+          }`}>
+            {isVelvetLime ? 'Now Playing' : 'PLAYING FROM PLAYLIST'}
+          </span>
+          {!isVelvetLime && (
+            <span className="text-xs font-bold text-white truncate max-w-[200px]">
+              {currentTrack.album.name}
+            </span>
+          )}
+        </div>
+
+        {isVelvetLime ? (
+          <button
+            onClick={() => toggleLike(currentTrack)}
+            className="frosted-circle-btn w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform"
+          >
+            <Heart
+              size={19}
+              className={liked ? 'text-[#D2F843] fill-[#D2F843]' : 'text-white'}
+            />
+          </button>
+        ) : (
+          <button className="p-2 text-[#b3b3b3] hover:text-white transition-colors">
+            <MoreVertical size={20} />
+          </button>
+        )}
       </div>
 
-      {/* Center: Large Album Art (Circular Vinyl on Velvet & Lime theme) */}
-      <div className="flex items-center justify-center my-auto py-4 relative">
+      {/* Center: Large Album Art (Circular Vinyl Disc on Velvet & Lime theme) */}
+      <div className="flex items-center justify-center my-auto py-2 relative z-10">
         {isVelvetLime && (
-          <div className="absolute w-64 h-64 rounded-full bg-gradient-to-tr from-[#D8B4FE]/25 to-[#D2F843]/20 blur-2xl pointer-events-none" />
+          <div className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-[#f97316]/30 via-[#D8B4FE]/25 to-[#D2F843]/20 blur-3xl pointer-events-none z-0" />
         )}
         {currentTrack.album.images[0] ? (
           <img
@@ -125,35 +176,45 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
             decoding="async"
             width={320}
             height={320}
-            className={`w-full max-w-[300px] aspect-square object-cover shadow-2xl bg-[#282828] relative z-10 ${
+            className={`aspect-square object-cover shadow-[0_20px_50px_rgba(0,0,0,0.85)] bg-[#181824] relative z-10 ${
               isVelvetLime
-                ? 'rounded-full border-4 border-white/20 shadow-[0_0_60px_rgba(210,248,67,0.2)]'
+                ? 'w-60 h-60 sm:w-72 sm:h-72 rounded-full border-4 border-white/20 ring-1 ring-white/10'
                 : isLiquidGlass
-                ? 'rounded-2xl border border-white/20'
-                : 'rounded-xl'
+                ? 'w-full max-w-[300px] rounded-2xl border border-white/20'
+                : 'w-full max-w-[300px] rounded-xl'
             }`}
           />
         ) : (
-          <div className="w-full max-w-[300px] aspect-square rounded-full bg-[#282828] flex items-center justify-center shadow-2xl relative z-10">
+          <div className="w-60 h-60 sm:w-72 sm:h-72 rounded-full bg-[#181824] flex items-center justify-center shadow-2xl relative z-10 border-4 border-white/20">
             <span className="text-6xl text-[#757575]">♪</span>
           </div>
         )}
       </div>
 
-      {/* Bottom Area: Info, Scrubber & Controls */}
-      <div className="flex flex-col gap-4 pb-4">
-        {/* Title, Artist & Like */}
+      {/* Bottom Area: Info, Lyrics Snippet, Scrubber & Controls */}
+      <div className="flex flex-col gap-3 pb-2 relative z-10">
+        {/* Title & Artist */}
         {isVelvetLime ? (
-          <div className="flex flex-col items-center text-center my-1">
-            <span className="text-2xl font-black text-white tracking-tight">
+          <div className="flex flex-col items-center text-center">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-sans truncate max-w-[90%]">
               {currentTrack.name}
+            </h2>
+            <span className="text-xs sm:text-sm font-medium text-white/60 mt-0.5 font-sans">
+              {currentTrack.artists.map((a) => a.name).join(' x ')}
             </span>
-            <span className="text-sm font-semibold text-[#D8B4FE] mt-0.5">
-              {currentTrack.artists.map((a) => a.name).join(', ')}
-            </span>
-            <p className="text-xs text-[#a0a0b8] italic mt-2.5 max-w-[280px] line-clamp-2">
-              "Whispers in the midnight breeze, carrying dreams across the seas..."
-            </p>
+
+            {/* 3-Line Synced Lyrics Snippet Card (Dribbble Screen 2) */}
+            <div className="flex flex-col items-center text-center my-3 max-w-xs mx-auto space-y-1 select-none">
+              <p className="text-xs sm:text-sm text-white/35 font-medium transition-colors">
+                Whispers in the midnight breeze,
+              </p>
+              <p className="text-sm sm:text-base text-white font-bold tracking-tight py-0.5 drop-shadow-sm">
+                Carrying dreams across the seas,
+              </p>
+              <p className="text-xs sm:text-sm text-white/35 font-medium transition-colors">
+                I close my eyes, let go, and drift away.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="flex items-center justify-between">
@@ -185,28 +246,27 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
         <NowPlayingProgressBar seek={seek} />
 
         {/* Master Playback Controls */}
-        <div className="flex items-center justify-between px-2">
+        <div className="flex items-center justify-between px-2 pt-1">
           <button
             onClick={toggleShuffle}
             className={`p-2 transition-colors ${
-              isShuffle ? 'text-white' : 'text-[#b3b3b3]'
+              isShuffle ? 'text-[#D2F843]' : 'text-white/60 hover:text-white'
             }`}
-            style={{ color: isShuffle ? currentThemeDef.accentColor : undefined }}
           >
             <Shuffle size={20} />
           </button>
           <button
             onClick={prevTrack}
-            className="p-2 text-white hover:opacity-75 transition-opacity"
+            className="p-2 text-white hover:opacity-80 transition-opacity"
           >
-            <SkipBack size={28} fill="currentColor" />
+            <SkipBack size={26} fill="currentColor" />
           </button>
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className={`w-16 h-16 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-2xl ${
+            className={`w-16 h-16 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-2xl ${
               isVelvetLime
-                ? 'bg-[#D2F843] text-black shadow-[0_0_30px_rgba(210,248,67,0.35)]'
+                ? 'bg-[#D2F843] text-black shadow-[0_0_30px_rgba(210,248,67,0.4)]'
                 : 'bg-white text-black'
             }`}
           >
@@ -220,23 +280,30 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
           </button>
           <button
             onClick={nextTrack}
-            className="p-2 text-white hover:opacity-75 transition-opacity"
+            className="p-2 text-white hover:opacity-80 transition-opacity"
           >
-            <SkipForward size={28} fill="currentColor" />
+            <SkipForward size={26} fill="currentColor" />
           </button>
-          <button
-            onClick={toggleRepeat}
-            className={`p-2 transition-colors ${
-              repeatMode !== 'off' ? 'text-white' : 'text-[#b3b3b3]'
-            }`}
-            style={{ color: repeatMode !== 'off' ? currentThemeDef.accentColor : undefined }}
-          >
-            {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
-          </button>
+
+          {isVelvetLime ? (
+            <button className="p-2 text-white/60 hover:text-white transition-colors">
+              <ListMusic size={20} />
+            </button>
+          ) : (
+            <button
+              onClick={toggleRepeat}
+              className={`p-2 transition-colors ${
+                repeatMode !== 'off' ? 'text-white' : 'text-[#b3b3b3]'
+              }`}
+              style={{ color: repeatMode !== 'off' ? currentThemeDef.accentColor : undefined }}
+            >
+              {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
+            </button>
+          )}
         </div>
 
         {/* Quality Selector Badge */}
-        <div className="flex items-center justify-between pt-2 text-[#b3b3b3] text-xs">
+        <div className="flex items-center justify-between pt-1 text-[#b3b3b3] text-xs">
           <div className="relative">
             <button
               onClick={() => setShowQualityMenu((prev) => !prev)}
@@ -269,7 +336,7 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
                       setShowQualityMenu(false);
                     }}
                     className={`w-full flex items-center justify-between px-2.5 py-2 rounded text-left ${
-                      audioQuality === q.id ? 'text-[#1db954] font-bold' : 'text-white'
+                      audioQuality === q.id ? 'text-[#D2F843] font-bold' : 'text-white'
                     }`}
                   >
                     <span>{q.label}</span>

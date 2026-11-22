@@ -15,13 +15,16 @@ interface MobileMiniPlayerProps {
  */
 const MiniProgressBar: React.FC = React.memo(() => {
   const { progressMs, durationMs } = usePlaybackProgress();
+  const { isVelvetLime } = useTheme();
   const progressPercent = durationMs > 0 ? (progressMs / durationMs) * 100 : 0;
 
   return (
     <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white/10 rounded-b-lg overflow-hidden">
       <div
         style={{ width: `${progressPercent}%` }}
-        className="h-full bg-[#1db954] transition-all duration-100"
+        className={`h-full transition-all duration-100 ${
+          isVelvetLime ? 'bg-[#D2F843]' : 'bg-[#1db954]'
+        }`}
       />
     </div>
   );
@@ -30,7 +33,7 @@ const MiniProgressBar: React.FC = React.memo(() => {
 export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPlayer }) => {
   const { currentTrack, isPlaying, isLoading, togglePlay } = usePlayback();
   const { isLiked, toggleLike } = useLibrary();
-  const { isLiquidGlass } = useTheme();
+  const { isLiquidGlass, isVelvetLime } = useTheme();
 
   if (!currentTrack) return null;
 
@@ -39,10 +42,12 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
   return (
     <div
       onClick={onOpenFullPlayer}
-      className={`fixed bottom-14 left-2 right-2 h-14 z-40 md:hidden rounded-lg flex items-center justify-between px-3 cursor-pointer select-none shadow-xl transition-all ${
-        isLiquidGlass
-          ? 'glass-player border border-white/25 backdrop-blur-2xl'
-          : 'bg-[#282828] text-white border border-[#383838]'
+      className={`fixed z-40 md:hidden flex items-center justify-between px-3 cursor-pointer select-none shadow-2xl transition-all ${
+        isVelvetLime
+          ? 'bottom-[84px] left-4 right-4 max-w-[360px] mx-auto h-14 rounded-full frosted-3d-dock border border-white/20'
+          : isLiquidGlass
+          ? 'bottom-14 left-2 right-2 h-14 rounded-lg glass-player border border-white/25 backdrop-blur-2xl'
+          : 'bottom-14 left-2 right-2 h-14 rounded-lg bg-[#282828] text-white border border-[#383838]'
       }`}
     >
       {/* Left: Track Info & Artwork */}
@@ -77,10 +82,18 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
             toggleLike(currentTrack);
           }}
           className={`p-1.5 transition-transform hover:scale-110 ${
-            liked ? 'text-[#1db954]' : 'text-[#b3b3b3]'
+            liked
+              ? isVelvetLime
+                ? 'text-[#D2F843]'
+                : 'text-[#1db954]'
+              : 'text-[#8E8E9F] hover:text-white'
           }`}
         >
-          {liked ? <Heart size={18} className="fill-[#1db954]" /> : <Heart size={18} />}
+          {liked ? (
+            <Heart size={18} className={isVelvetLime ? 'fill-[#D2F843]' : 'fill-[#1db954]'} />
+          ) : (
+            <Heart size={18} />
+          )}
         </button>
 
         {/* Play/Pause */}
@@ -90,7 +103,9 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
             togglePlay();
           }}
           disabled={isLoading}
-          className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow"
+          className={`w-8 h-8 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow ${
+            isVelvetLime ? 'bg-[#D2F843] text-black shadow-[0_0_12px_rgba(210,248,67,0.4)]' : 'bg-white text-black'
+          }`}
         >
           {isLoading ? (
             <Loader2 size={16} className="animate-spin text-black" />

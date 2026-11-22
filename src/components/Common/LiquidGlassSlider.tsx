@@ -30,7 +30,7 @@ export const LiquidGlassSlider: React.FC<LiquidGlassSliderProps> = ({
   className = '',
   accentColor,
 }) => {
-  const { isLiquidGlass, currentThemeDef } = useTheme();
+  const { isLiquidGlass, isVelvetLime, currentThemeDef } = useTheme();
   const effectiveAccent = accentColor || currentThemeDef?.accentColor || '#30d158';
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -81,6 +81,33 @@ export const LiquidGlassSlider: React.FC<LiquidGlassSliderProps> = ({
       (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
     } catch {}
   };
+
+  // If in Velvet & Lime theme, render sleek electric lime slider with glowing thumb
+  if (isVelvetLime) {
+    return (
+      <div
+        ref={trackRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`group relative flex items-center h-5 cursor-pointer select-none touch-none ${className}`}
+      >
+        <div className="w-full h-1 bg-white/20 rounded-full relative overflow-hidden transition-all">
+          <div
+            style={{ width: `${activePercent}%`, backgroundColor: '#D2F843' }}
+            className="h-full rounded-full transition-all shadow-[0_0_10px_rgba(210,248,67,0.6)]"
+          />
+        </div>
+        {/* Velvet Lime Thumb circle */}
+        <div
+          style={{ left: `${activePercent}%`, backgroundColor: '#D2F843' }}
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full shadow-[0_0_12px_rgba(210,248,67,0.8)] border-2 border-black pointer-events-none transition-transform group-hover:scale-125"
+        />
+      </div>
+    );
+  }
 
   // If in classic Spotify Dark Theme, render authentic Spotify CEF scrubber
   if (!isLiquidGlass) {
