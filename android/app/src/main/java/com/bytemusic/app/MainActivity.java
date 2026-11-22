@@ -48,8 +48,13 @@ public class MainActivity extends BridgeActivity {
             // Native Media Bridge: Syncs web playback state with Android Lock Screen & Notification
             webView.addJavascriptInterface(new Object() {
                 @JavascriptInterface
-                public void updateMetadata(String title, String artist, String album, boolean isPlaying) {
-                    BackgroundAudioService.updateMedia(MainActivity.this, title, artist, album, isPlaying);
+                public void updateMetadata(String title, String artist, String album, String imageUrl, long durationMs, long positionMs, boolean isPlaying) {
+                    BackgroundAudioService.updateMedia(MainActivity.this, title, artist, album, imageUrl, durationMs, positionMs, isPlaying);
+                }
+
+                @JavascriptInterface
+                public void updatePlaybackState(boolean isPlaying, long positionMs) {
+                    BackgroundAudioService.updatePlaybackState(MainActivity.this, isPlaying, positionMs);
                 }
             }, "NativeMediaBridge");
         }
@@ -60,6 +65,17 @@ public class MainActivity extends BridgeActivity {
             instance.runOnUiThread(() -> {
                 instance.bridge.getWebView().evaluateJavascript(
                     "if (typeof window.bytemusic_mediaAction === 'function') { window.bytemusic_mediaAction('" + action + "'); } else { window.dispatchEvent(new CustomEvent('bytemusic-media-action', { detail: '" + action + "' })); }",
+                    null
+                );
+            });
+        }
+    }
+
+    public static void dispatchMediaSeek(long positionMs) {
+        if (instance != null && instance.bridge != null && instance.bridge.getWebView() != null) {
+            instance.runOnUiThread(() -> {
+                instance.bridge.getWebView().evaluateJavascript(
+                    "if (typeof window.bytemusic_mediaSeek === 'function') { window.bytemusic_mediaSeek(" + positionMs + "); } else { window.dispatchEvent(new CustomEvent('bytemusic-media-seek', { detail: " + positionMs + " })); }",
                     null
                 );
             });

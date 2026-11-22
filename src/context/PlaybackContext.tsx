@@ -8,7 +8,8 @@ declare global {
     YT: any;
     onYouTubeIframeAPIReady: () => void;
     NativeMediaBridge?: {
-      updateMetadata: (title: string, artist: string, album: string, isPlaying: boolean) => void;
+      updateMetadata: (title: string, artist: string, album: string, imageUrl: string, durationMs: number, positionMs: number, isPlaying: boolean) => void;
+      updatePlaybackState?: (isPlaying: boolean, positionMs: number) => void;
     };
   }
 }
@@ -68,6 +69,11 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
       try {
         ytPlayerRef.current.seekTo(ms / 1000, true);
+      } catch {}
+    }
+    if (window.NativeMediaBridge && typeof window.NativeMediaBridge.updatePlaybackState === 'function') {
+      try {
+        window.NativeMediaBridge.updatePlaybackState(isPlaying, Math.round(ms));
       } catch {}
     }
   };
@@ -332,14 +338,19 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [currentTrack, isPlaying, durationMs, progressMs, handleNextTrackInternal, handlePrevTrackInternal]);
 
-  // Sync with Native Android MediaSession (Lock Screen & Notification Panel) - decoupled from 250ms progressMs ticker
+  // Sync with Native Android MediaSession (Lock Screen & Notification Panel)
   useEffect(() => {
     if (currentTrack && window.NativeMediaBridge && typeof window.NativeMediaBridge.updateMetadata === 'function') {
       try {
+        const imgUrl = currentTrack.album?.images?.[0]?.url || '';
+        const dur = durationMs > 0 ? durationMs : (currentTrack.duration?.milliseconds || 0);
         window.NativeMediaBridge.updateMetadata(
           currentTrack.name,
           currentTrack.artists.map((a) => a.name).join(', '),
           currentTrack.album.name,
+          imgUrl,
+          dur,
+          progressMs || 0,
           isPlaying
         );
       } catch (e) {
@@ -432,42 +443,24 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const togglePlay = useCallback(() => {
     if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
-      audioRef.current.pause();
-      setIsPlaying(false);
+      pauseInternal();
       return;
     }
     if (audioRef.current && audioRef.current.src && audioRef.current.paused && audioRef.current.currentTime > 0) {
-      audioRef.current.play().catch(() => {});
-      setIsPlaying(true);
+      resumeInternal();
       return;
     }
 
     if (ytPlayerRef.current) {
       if (isPlaying) {
-        try {
-          ytPlayerRef.current.pauseVideo();
-        } catch {}
-        setIsPlaying(false);
+        pauseInternal();
       } else {
-        try {
-          const videoUrl = typeof ytPlayerRef.current.getVideoUrl === 'function' ? ytPlayerRef.current.getVideoUrl() : null;
-          if (!videoUrl && currentTrackRef.current) {
-            playTrackInternal(currentTrackRef.current);
-            return;
-          }
-          ytPlayerRef.current.playVideo();
-        } catch {
-          if (currentTrackRef.current) {
-            playTrackInternal(currentTrackRef.current);
-            return;
-          }
-        }
-        setIsPlaying(true);
+        resumeInternal();
       }
     } else if (currentTrackRef.current) {
       playTrackInternal(currentTrackRef.current);
     }
-  }, [isPlaying, playTrackInternal]);
+  }, [isPlaying, pauseInternal, resumeInternal, playTrackInternal]);
 
   // Listen for Native Android Lock Screen & Notification Action Commands
   useEffect(() => {
@@ -494,10 +487,24 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
+    (window as any).bytemusic_mediaSeek = (positionMs: number) => {
+      seekInternal(positionMs);
+    };
+
+    const handleNativeMediaSeek = (event: any) => {
+      const pos = event?.detail;
+      if (typeof pos === 'number') {
+        seekInternal(pos);
+      }
+    };
+
     window.addEventListener('bytemusic-media-action', handleNativeMediaAction);
+    window.addEventListener('bytemusic-media-seek', handleNativeMediaSeek);
     return () => {
       delete (window as any).bytemusic_mediaAction;
+      delete (window as any).bytemusic_mediaSeek;
       window.removeEventListener('bytemusic-media-action', handleNativeMediaAction);
+      window.removeEventListener('bytemusic-media-seek', handleNativeMediaSeek);
     };
   }, [togglePlay, pauseInternal, handleNextTrackInternal, handlePrevTrackInternal]);
 
