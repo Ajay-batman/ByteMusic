@@ -76,11 +76,11 @@ export const SearchRoute: React.FC = () => {
               images: [
                 {
                   url:
-                    item.artworkUrl100?.replace('100x100bb', '600x600bb') ||
+                    item.artworkUrl100?.replace('100x100bb', '250x250bb') ||
                     item.artworkUrl100 ||
                     'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300',
-                  width: 600,
-                  height: 600,
+                  width: 250,
+                  height: 250,
                 },
               ],
             },
@@ -211,6 +211,10 @@ export const SearchRoute: React.FC = () => {
                 <img
                   src={genre.image}
                   alt={genre.title}
+                  loading="lazy"
+                  decoding="async"
+                  width={96}
+                  height={96}
                   className="absolute -right-4 -bottom-2 w-24 h-24 rotate-[25deg] shadow-lg rounded object-cover"
                 />
               </div>
@@ -299,7 +303,11 @@ const TopResultCard: React.FC<{ track: Track; queue?: Track[] }> = ({ track, que
         <img
           src={track.album.images[0].url}
           alt={track.name}
-          className="w-24 h-24 rounded object-cover shadow-lg mb-4"
+          loading="lazy"
+          decoding="async"
+          width={96}
+          height={96}
+          className="w-24 h-24 rounded object-cover shadow-lg mb-4 bg-[#282828]"
         />
       )}
       <h3 className="text-2xl font-bold text-white mb-1 hover:underline truncate">

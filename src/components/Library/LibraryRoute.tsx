@@ -72,7 +72,11 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
                 <img
                   src={pl.images[0].url}
                   alt={pl.name}
-                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0 shadow-md"
+                  loading="lazy"
+                  decoding="async"
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0 shadow-md bg-[#282828]"
                 />
               ) : (
                 <div className="w-16 h-16 rounded-lg bg-[#282828] flex items-center justify-center flex-shrink-0 shadow-md">

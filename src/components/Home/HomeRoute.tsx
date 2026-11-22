@@ -85,7 +85,11 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist }) => {
                 <img
                   src={pl.images[0]?.url}
                   alt={pl.name}
-                  className="w-full aspect-square object-cover rounded shadow-lg"
+                  loading="lazy"
+                  decoding="async"
+                  width={200}
+                  height={200}
+                  className="w-full aspect-square object-cover rounded shadow-lg bg-[#282828]"
                 />
                 <button
                   onClick={(e) => {
@@ -132,7 +136,11 @@ const QuickPlayCard: React.FC<{ playlist: Playlist; onClick: () => void }> = ({
       <img
         src={playlist.images[0]?.url}
         alt={playlist.name}
-        className="w-16 h-16 object-cover flex-shrink-0 shadow-md"
+        loading="lazy"
+        decoding="async"
+        width={64}
+        height={64}
+        className="w-16 h-16 object-cover flex-shrink-0 shadow-md bg-[#282828]"
       />
       <span className="font-bold text-sm text-white px-4 flex-1 truncate">
         {playlist.name}

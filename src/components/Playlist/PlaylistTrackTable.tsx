@@ -141,7 +141,11 @@ const TrackRow: React.FC<{
           <img
             src={track.album.images[0].url}
             alt={track.name}
-            className="w-10 h-10 rounded object-cover shadow-sm flex-shrink-0"
+            loading="lazy"
+            decoding="async"
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded object-cover shadow-sm flex-shrink-0 bg-[#282828]"
           />
         )}
         <div className="flex flex-col truncate">

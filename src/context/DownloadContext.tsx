@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Track } from '../types/spotify';
 
 interface DownloadContextType {
@@ -14,7 +14,6 @@ interface DownloadContextType {
 const DownloadContext = createContext<DownloadContextType | null>(null);
 
 const STORAGE_KEY = 'spotify_downloaded_ids';
-const CACHE_NAME = 'spotify-offline-audio';
 
 export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [downloadedTrackIds, setDownloadedTrackIds] = useState<Set<string>>(() => {
@@ -110,18 +109,29 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [downloadedTrackIds, downloadTrack]);
 
+  const contextValue = useMemo<DownloadContextType>(
+    () => ({
+      downloadedTrackIds,
+      downloadingTrackIds,
+      downloadTrack,
+      removeDownload,
+      isDownloaded,
+      isDownloading,
+      downloadPlaylist,
+    }),
+    [
+      downloadedTrackIds,
+      downloadingTrackIds,
+      downloadTrack,
+      removeDownload,
+      isDownloaded,
+      isDownloading,
+      downloadPlaylist,
+    ]
+  );
+
   return (
-    <DownloadContext.Provider
-      value={{
-        downloadedTrackIds,
-        downloadingTrackIds,
-        downloadTrack,
-        removeDownload,
-        isDownloaded,
-        isDownloading,
-        downloadPlaylist,
-      }}
-    >
+    <DownloadContext.Provider value={contextValue}>
       {children}
     </DownloadContext.Provider>
   );

@@ -1,0 +1,27 @@
+<svg fill="#ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 256" width="720" height="256" role="img" aria-labelledby="title-hz"><title>ByteMusic</title>
+  <title id="title-hz">ByteMusic Horizontal Logo</title>
+  <g transform="translate(10, 0)">
+    <rect x="46" y="28" width="28" height="200" rx="14" fill="#ffffff"/>
+    <path d="M 86 122 C 102 122 114 134 114 150 C 114 166 102 178 86 178 Z" fill="#ffffff"/>
+    <path d="M 86 96 C 118 96 144 120 144 150 C 144 180 118 204 86 204 V 186 C 108 186 126 170 126 150 C 126 130 108 114 86 114 Z" fill="#ffffff"/>
+    <path d="M 86 70 C 132 70 174 104 174 150 C 174 196 132 230 86 230 V 212 C 122 212 156 184 156 150 C 156 116 122 88 86 88 Z" fill="#ffffff"/>
+    <rect x="184" y="116" width="16" height="16" rx="4" fill="#ffffff"/>
+    <rect x="184" y="142" width="26" height="16" rx="4" fill="#ffffff"/>
+    <rect x="184" y="168" width="16" height="16" rx="4" fill="#ffffff"/>
+  </g>
+  <g transform="translate(240, 0)">
+    <!-- "Byte" in Deep Obsidian / Primary -->
+    <path fill-rule="evenodd" fill="#ffffff" d="M 20 96 H 54 C 68 96 76 102 76 112 C 76 119 71 124 64 126 C 73 128 78 135 78 144 C 78 156 68 162 52 162 H 20 Z M 36 109 V 122 H 51 C 58 122 62 119 62 115 C 62 111 58 109 51 109 Z M 36 133 V 149 H 52 C 59 149 64 146 64 141 C 64 136 59 133 52 133 Z"/>
+    <path fill="#ffffff" d="M 82 112 L 96 148 L 110 112 H 125 L 104 162 C 99 174 93 178 82 178 H 76 V 165 H 81 C 87 165 90 162 92 156 L 82 132 L 68 112 Z"/>
+    <path fill="#ffffff" d="M 140 102 V 112 H 152 V 124 H 140 V 150 C 140 154 143 156 148 156 H 152 V 162 C 148 163 144 163 140 163 C 130 163 126 157 126 148 V 124 H 116 V 112 H 126 V 102 Z"/>
+    <path fill-rule="evenodd" fill="#ffffff" d="M 160 137 C 160 122 171 111 187 111 C 202 111 213 122 213 138 C 213 140 213 142 212 143 H 174 C 176 151 181 155 189 155 C 196 155 201 152 204 147 L 213 152 C 208 160 200 165 188 165 C 171 165 160 153 160 137 Z M 174 133 H 199 C 198 126 194 121 187 121 C 180 121 176 126 174 133 Z"/>
+    <!-- "Music" in Electric Violet with Cyber Cyan Dot -->
+    <path fill="#ffffff" d="M 230 96 H 246 L 260 138 L 274 96 H 290 V 162 H 276 V 118 L 265 152 H 255 L 244 118 V 162 H 230 Z"/>
+    <path fill="#ffffff" d="M 300 112 H 314 V 144 C 314 150 317 154 324 154 C 330 154 334 150 334 144 V 112 H 348 V 162 H 335 V 154 C 331 160 326 163 318 163 C 307 163 300 155 300 142 Z"/>
+    <path fill="#ffffff" d="M 358 153 L 368 147 C 372 152 376 155 382 155 C 387 155 390 153 390 149 C 390 145 387 144 380 142 C 369 139 361 135 361 125 C 361 116 369 111 380 111 C 389 111 396 115 401 122 L 392 128 C 388 124 385 122 380 122 C 376 122 373 124 373 127 C 373 130 376 132 383 134 C 395 137 403 141 403 150 C 403 160 394 165 382 165 C 371 165 363 160 358 153 Z"/>
+    <path fill="#ffffff" d="M 414 112 H 428 V 162 H 414 Z"/>
+    <!-- Cyber Cyan Tittle (Acoustic Accent) -->
+    <rect x="414" y="96" width="14" height="10" rx="3" fill="#ffffff"/>
+    <path fill="#ffffff" d="M 466 128 L 454 133 C 452 125 447 121 441 121 C 432 121 426 128 426 138 C 426 148 432 155 441 155 C 447 155 452 151 454 144 L 466 149 C 462 159 453 165 440 165 C 424 165 412 154 412 138 C 412 122 424 111 440 111 C 452 111 462 118 466 128 Z"/>
+  </g>
+</svg>

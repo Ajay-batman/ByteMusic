@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { Track, PlaybackState, AudioQuality } from '../types/spotify';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Track, AudioQuality } from '../types/spotify';
 import { mockTracks } from '../data/mockSpotifyCatalog';
 import { apiUrl } from '../config/api';
 
@@ -14,7 +14,16 @@ declare global {
   }
 }
 
-interface PlaybackContextType extends PlaybackState {
+export interface PlaybackContextType {
+  currentTrack: Track | null;
+  isPlaying: boolean;
+  isLoading: boolean;
+  volume: number;
+  isMuted: boolean;
+  isShuffle: boolean;
+  repeatMode: 'off' | 'all' | 'one';
+  audioQuality: AudioQuality;
+  setAudioQuality: (quality: AudioQuality) => void;
   playTrack: (track: Track, newQueue?: Track[]) => void;
   togglePlay: () => void;
   pause: () => void;
@@ -26,17 +35,94 @@ interface PlaybackContextType extends PlaybackState {
   toggleRepeat: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
-  setAudioQuality: (quality: AudioQuality) => void;
+}
+
+export interface PlaybackProgressContextType {
+  progressMs: number;
+  durationMs: number;
 }
 
 const PlaybackContext = createContext<PlaybackContextType | null>(null);
+const PlaybackProgressContext = createContext<PlaybackProgressContextType>({
+  progressMs: 0,
+  durationMs: 0,
+});
+
+/**
+ * PlaybackProgressProvider
+ * High-frequency 250ms ticker provider.
+ * Isolated from PlaybackContext to prevent full-tree re-render storms during audio playback.
+ */
+const PlaybackProgressProvider: React.FC<{
+  isPlaying: boolean;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+  ytPlayerRef: React.RefObject<any>;
+  currentTrack: Track | null;
+  children: React.ReactNode;
+}> = ({ isPlaying, audioRef, ytPlayerRef, currentTrack, children }) => {
+  const [progressMs, setProgressMs] = useState<number>(0);
+  const [durationMs, setDurationMs] = useState<number>(currentTrack?.duration.milliseconds || 0);
+
+  // Sync track duration and reset progress on track change
+  useEffect(() => {
+    if (currentTrack) {
+      setProgressMs(0);
+      setDurationMs(currentTrack.duration.milliseconds);
+    }
+  }, [currentTrack]);
+
+  // Listen for internal seek updates
+  useEffect(() => {
+    const handleSeek = (e: CustomEvent<number>) => {
+      if (typeof e.detail === 'number') {
+        setProgressMs(e.detail);
+      }
+    };
+    window.addEventListener('bytemusic-internal-seek' as any, handleSeek);
+    return () => window.removeEventListener('bytemusic-internal-seek' as any, handleSeek);
+  }, []);
+
+  // 250ms high-frequency time tracking interval (runs ONLY inside this provider)
+  useEffect(() => {
+    let interval: any;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
+          setProgressMs(Math.floor(audioRef.current.currentTime * 1000));
+          if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+            setDurationMs(Math.floor(audioRef.current.duration * 1000));
+          }
+          return;
+        }
+
+        if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
+          try {
+            const sec = ytPlayerRef.current.getCurrentTime() || 0;
+            const dur = ytPlayerRef.current.getDuration() || 0;
+            setProgressMs(Math.floor(sec * 1000));
+            if (dur > 0) {
+              setDurationMs(Math.floor(dur * 1000));
+            }
+          } catch {}
+        }
+      }, 250);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, audioRef, ytPlayerRef]);
+
+  const progressValue = useMemo(() => ({ progressMs, durationMs }), [progressMs, durationMs]);
+
+  return (
+    <PlaybackProgressContext.Provider value={progressValue}>
+      {children}
+    </PlaybackProgressContext.Provider>
+  );
+};
 
 export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(mockTracks[0]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [progressMs, setProgressMs] = useState<number>(0);
-  const [durationMs, setDurationMs] = useState<number>(mockTracks[0].duration.milliseconds);
   const [volume, setVolumeState] = useState<number>(0.8);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
@@ -51,6 +137,8 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const currentTrackRef = useRef<Track | null>(mockTracks[0]);
   const queueRef = useRef<Track[]>(mockTracks);
   const repeatModeRef = useRef<'off' | 'all' | 'one'>(repeatMode);
+  const currentBlobUrlRef = useRef<string | null>(null);
+  const playRequestIdRef = useRef<number>(0);
 
   // Keep state refs in sync
   useEffect(() => {
@@ -61,8 +149,22 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     repeatModeRef.current = repeatMode;
   }, [repeatMode]);
 
-  const seekInternal = (ms: number) => {
-    setProgressMs(ms);
+  // Clean up cached blob URLs to prevent JS Heap / Graphics memory bloat
+  const cleanupBlobUrl = useCallback(() => {
+    if (currentBlobUrlRef.current) {
+      URL.revokeObjectURL(currentBlobUrlRef.current);
+      currentBlobUrlRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      cleanupBlobUrl();
+    };
+  }, [cleanupBlobUrl]);
+
+  const seekInternal = useCallback((ms: number) => {
+    window.dispatchEvent(new CustomEvent('bytemusic-internal-seek', { detail: ms }));
     if (audioRef.current && audioRef.current.src) {
       audioRef.current.currentTime = ms / 1000;
     }
@@ -73,12 +175,24 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     if (window.NativeMediaBridge && typeof window.NativeMediaBridge.updatePlaybackState === 'function') {
       try {
-        window.NativeMediaBridge.updatePlaybackState(isPlaying, Math.round(ms));
+        window.NativeMediaBridge.updatePlaybackState(userIntentPlayingRef.current, Math.round(ms));
       } catch {}
     }
-  };
+    if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && currentTrackRef.current) {
+      try {
+        const durSec = (currentTrackRef.current.duration?.milliseconds || 0) / 1000;
+        if (durSec > 0) {
+          navigator.mediaSession.setPositionState({
+            duration: durSec,
+            playbackRate: 1.0,
+            position: Math.min(Math.max(0, ms / 1000), durSec),
+          });
+        }
+      } catch {}
+    }
+  }, []);
 
-  const resumeInternal = () => {
+  const resumeInternal = useCallback(() => {
     userIntentPlayingRef.current = true;
     if (audioRef.current && audioRef.current.src && audioRef.current.paused) {
       audioRef.current.play().catch(() => {});
@@ -91,7 +205,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setIsPlaying(true);
       } catch {}
     }
-  };
+  }, []);
 
   const pauseInternal = useCallback(() => {
     userIntentPlayingRef.current = false;
@@ -105,6 +219,101 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     setIsPlaying(false);
   }, []);
+
+  // Master PlayTrack: Plays 100% FULL Song via YouTube IFrame Engine (or Offline Cache)
+  const playTrackInternal = useCallback((track: Track, newQueue?: Track[]) => {
+    const playRequestId = ++playRequestIdRef.current;
+
+    if (newQueue && newQueue.length > 0) {
+      queueRef.current = newQueue;
+    }
+    currentTrackRef.current = track;
+    setCurrentTrack(track);
+    setIsLoading(true);
+    window.dispatchEvent(new CustomEvent('bytemusic-internal-seek', { detail: 0 }));
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    const startPlayback = (ytId: string) => {
+      cleanupBlobUrl();
+      if (audioRef.current) {
+        audioRef.current.src = '';
+      }
+      userIntentPlayingRef.current = true;
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
+        ytPlayerRef.current.loadVideoById(ytId);
+        ytPlayerRef.current.playVideo();
+        setIsPlaying(true);
+        setIsLoading(false);
+      } else {
+        pendingVideoIdRef.current = ytId;
+        setIsLoading(true);
+      }
+    };
+
+    // 1. Check Offline Cache first (for downloaded tracks)
+    (async () => {
+      try {
+        if ('caches' in window) {
+          const cache = await caches.open('spotify-offline-audio');
+          const cachedRes = await cache.match(apiUrl(`/api/stream?id=${encodeURIComponent(track.youtubeId || '')}`));
+          if (cachedRes && audioRef.current) {
+            if (playRequestId !== playRequestIdRef.current) return;
+            const blob = await cachedRes.blob();
+            cleanupBlobUrl();
+            const blobUrl = URL.createObjectURL(blob);
+            currentBlobUrlRef.current = blobUrl;
+            audioRef.current.src = blobUrl;
+            audioRef.current.load();
+            await audioRef.current.play();
+            setIsPlaying(true);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Offline cache lookup error:', e);
+      }
+
+      if (playRequestId !== playRequestIdRef.current) return;
+
+      // 2. Use track.youtubeId or cached ID in localStorage
+      const artistName = track.artists[0]?.name || '';
+      const cacheKey = `yt_id_${track.name}_${artistName}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const cachedYtId = track.youtubeId || localStorage.getItem(cacheKey);
+
+      if (cachedYtId) {
+        startPlayback(cachedYtId);
+        return;
+      }
+
+      // 3. Resolve via server /api/resolve-yt
+      const query = `${track.name} ${artistName}`;
+      fetch(apiUrl(`/api/resolve-yt?q=${encodeURIComponent(query)}`))
+        .then((res) => res.json())
+        .then((data) => {
+          if (playRequestId !== playRequestIdRef.current) return;
+          if (data.videoId) {
+            try {
+              localStorage.setItem(cacheKey, data.videoId);
+            } catch {}
+            track.youtubeId = data.videoId;
+            if (currentTrackRef.current?.id === track.id) {
+              startPlayback(data.videoId);
+            }
+          } else {
+            setIsLoading(false);
+          }
+        })
+        .catch((err) => {
+          if (playRequestId !== playRequestIdRef.current) return;
+          console.warn('Failed to resolve song ID:', err);
+          setIsLoading(false);
+        });
+    })();
+  }, [cleanupBlobUrl]);
 
   const handleNextTrackInternal = useCallback(() => {
     const q = queueRef.current.length > 0 ? queueRef.current : mockTracks;
@@ -126,7 +335,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (nextItem) {
       playTrackInternal(nextItem);
     }
-  }, []);
+  }, [seekInternal, resumeInternal, playTrackInternal]);
 
   const handlePrevTrackInternal = useCallback(() => {
     const q = queueRef.current.length > 0 ? queueRef.current : mockTracks;
@@ -142,7 +351,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (prevItem) {
       playTrackInternal(prevItem);
     }
-  }, []);
+  }, [playTrackInternal]);
 
   // Initialize Native HTML5 Audio for offline blob caching
   useEffect(() => {
@@ -244,34 +453,6 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [handleNextTrackInternal]);
 
-  // High-Precision Time Tracking Interval
-  useEffect(() => {
-    let interval: any;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
-          setProgressMs(Math.floor(audioRef.current.currentTime * 1000));
-          if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
-            setDurationMs(Math.floor(audioRef.current.duration * 1000));
-          }
-          return;
-        }
-
-        if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
-          try {
-            const sec = ytPlayerRef.current.getCurrentTime() || 0;
-            const dur = ytPlayerRef.current.getDuration() || 0;
-            setProgressMs(Math.floor(sec * 1000));
-            if (dur > 0) {
-              setDurationMs(Math.floor(dur * 1000));
-            }
-          } catch {}
-        }
-      }, 250);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying]);
-
   // Volume Sync
   useEffect(() => {
     const volLevel = isMuted ? 0 : volume;
@@ -286,6 +467,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [volume, isMuted]);
 
   // System MediaSession API for Native Lockscreen & Notification Controls
+  // Optimized: Removed progressMs dependency to prevent MediaMetadata recreation 4 times/sec
   useEffect(() => {
     if ('mediaSession' in navigator && currentTrack) {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -322,40 +504,33 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         });
         navigator.mediaSession.setActionHandler('seekbackward', () => {
-          seekInternal(Math.max(0, progressMs - 10000));
+          const curTime = (audioRef.current?.currentTime || ytPlayerRef.current?.getCurrentTime?.() || 0) * 1000;
+          seekInternal(Math.max(0, curTime - 10000));
         });
         navigator.mediaSession.setActionHandler('seekforward', () => {
-          seekInternal(Math.min(durationMs, progressMs + 10000));
+          const curTime = (audioRef.current?.currentTime || ytPlayerRef.current?.getCurrentTime?.() || 0) * 1000;
+          const dur = currentTrack.duration.milliseconds;
+          seekInternal(Math.min(dur, curTime + 10000));
         });
       } catch (e) {
         console.warn('MediaSession handler error:', e);
       }
-
-      if ('setPositionState' in navigator.mediaSession && durationMs > 0) {
-        try {
-          navigator.mediaSession.setPositionState({
-            duration: Math.max(0, durationMs / 1000),
-            playbackRate: 1.0,
-            position: Math.min(Math.max(0, progressMs / 1000), durationMs / 1000),
-          });
-        } catch {}
-      }
     }
-  }, [currentTrack, isPlaying, durationMs, progressMs, handleNextTrackInternal, handlePrevTrackInternal]);
+  }, [currentTrack, isPlaying, resumeInternal, pauseInternal, handlePrevTrackInternal, handleNextTrackInternal, seekInternal]);
 
   // Sync with Native Android MediaSession (Lock Screen & Notification Panel)
   useEffect(() => {
     if (currentTrack && window.NativeMediaBridge && typeof window.NativeMediaBridge.updateMetadata === 'function') {
       try {
         const imgUrl = currentTrack.album?.images?.[0]?.url || '';
-        const dur = durationMs > 0 ? durationMs : (currentTrack.duration?.milliseconds || 0);
+        const dur = currentTrack.duration?.milliseconds || 0;
         window.NativeMediaBridge.updateMetadata(
           currentTrack.name,
           currentTrack.artists.map((a) => a.name).join(', '),
           currentTrack.album.name,
           imgUrl,
           dur,
-          progressMs || 0,
+          0,
           isPlaying
         );
       } catch (e) {
@@ -363,88 +538,6 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
   }, [currentTrack, isPlaying]);
-
-  // Master PlayTrack: Plays 100% FULL Song via YouTube IFrame Engine (or Offline Cache)
-  const playTrackInternal = useCallback((track: Track, newQueue?: Track[]) => {
-    if (newQueue && newQueue.length > 0) {
-      queueRef.current = newQueue;
-    }
-    currentTrackRef.current = track;
-    setCurrentTrack(track);
-    setDurationMs(track.duration.milliseconds);
-    setProgressMs(0);
-    setIsLoading(true);
-
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-
-    const startPlayback = (ytId: string) => {
-      userIntentPlayingRef.current = true;
-      if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
-        ytPlayerRef.current.loadVideoById(ytId);
-        ytPlayerRef.current.playVideo();
-        setIsPlaying(true);
-        setIsLoading(false);
-      } else {
-        pendingVideoIdRef.current = ytId;
-        setIsLoading(true);
-      }
-    };
-
-    // 1. Check Offline Cache first (for downloaded tracks)
-    (async () => {
-      try {
-        if ('caches' in window) {
-          const cache = await caches.open('spotify-offline-audio');
-          const cachedRes = await cache.match(apiUrl(`/api/stream?id=${encodeURIComponent(track.youtubeId || '')}`));
-          if (cachedRes && audioRef.current) {
-            const blob = await cachedRes.blob();
-            audioRef.current.src = URL.createObjectURL(blob);
-            audioRef.current.load();
-            await audioRef.current.play();
-            setIsPlaying(true);
-            setIsLoading(false);
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn('Offline cache lookup error:', e);
-      }
-
-      // 2. Use track.youtubeId or cached ID in localStorage
-      const artistName = track.artists[0]?.name || '';
-      const cacheKey = `yt_id_${track.name}_${artistName}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      const cachedYtId = track.youtubeId || localStorage.getItem(cacheKey);
-
-      if (cachedYtId) {
-        startPlayback(cachedYtId);
-        return;
-      }
-
-      // 3. Resolve via server /api/resolve-yt
-      const query = `${track.name} ${artistName}`;
-      fetch(apiUrl(`/api/resolve-yt?q=${encodeURIComponent(query)}`))
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.videoId) {
-            try {
-              localStorage.setItem(cacheKey, data.videoId);
-            } catch {}
-            track.youtubeId = data.videoId;
-            if (currentTrackRef.current?.id === track.id) {
-              startPlayback(data.videoId);
-            }
-          } else {
-            setIsLoading(false);
-          }
-        })
-        .catch((err) => {
-          console.warn('Failed to resolve song ID:', err);
-          setIsLoading(false);
-        });
-    })();
-  }, []);
 
   const togglePlay = useCallback(() => {
     if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
@@ -511,7 +604,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       window.removeEventListener('bytemusic-media-action', handleNativeMediaAction);
       window.removeEventListener('bytemusic-media-seek', handleNativeMediaSeek);
     };
-  }, [togglePlay, pauseInternal, handleNextTrackInternal, handlePrevTrackInternal]);
+  }, [togglePlay, pauseInternal, resumeInternal, handleNextTrackInternal, handlePrevTrackInternal, seekInternal]);
 
   const pause = useCallback(() => {
     pauseInternal();
@@ -519,11 +612,11 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const resume = useCallback(() => {
     resumeInternal();
-  }, []);
+  }, [resumeInternal]);
 
   const seek = useCallback((ms: number) => {
     seekInternal(ms);
-  }, []);
+  }, [seekInternal]);
 
   const setVolume = useCallback((val: number) => {
     const clamped = Math.max(0, Math.min(1, val));
@@ -568,34 +661,64 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAudioQualityState(quality);
   }, []);
 
+  // Memoized low-frequency playback context value
+  const playbackContextValue = useMemo<PlaybackContextType>(
+    () => ({
+      currentTrack,
+      isPlaying,
+      isLoading,
+      volume: isMuted ? 0 : volume,
+      isMuted,
+      isShuffle,
+      repeatMode,
+      audioQuality,
+      setAudioQuality,
+      playTrack: playTrackInternal,
+      togglePlay,
+      pause,
+      resume,
+      seek,
+      setVolume,
+      toggleMute,
+      toggleShuffle,
+      toggleRepeat,
+      nextTrack: handleNextTrackInternal,
+      prevTrack: handlePrevTrackInternal,
+    }),
+    [
+      currentTrack,
+      isPlaying,
+      isLoading,
+      volume,
+      isMuted,
+      isShuffle,
+      repeatMode,
+      audioQuality,
+      setAudioQuality,
+      playTrackInternal,
+      togglePlay,
+      pause,
+      resume,
+      seek,
+      setVolume,
+      toggleMute,
+      toggleShuffle,
+      toggleRepeat,
+      handleNextTrackInternal,
+      handlePrevTrackInternal,
+    ]
+  );
+
   return (
-    <PlaybackContext.Provider
-      value={{
-        currentTrack,
-        isPlaying,
-        isLoading,
-        progressMs,
-        durationMs,
-        volume: isMuted ? 0 : volume,
-        isMuted,
-        isShuffle,
-        repeatMode,
-        audioQuality,
-        setAudioQuality,
-        playTrack: playTrackInternal,
-        togglePlay,
-        pause,
-        resume,
-        seek,
-        setVolume,
-        toggleMute,
-        toggleShuffle,
-        toggleRepeat,
-        nextTrack: handleNextTrackInternal,
-        prevTrack: handlePrevTrackInternal,
-      }}
-    >
-      {children}
+    <PlaybackContext.Provider value={playbackContextValue}>
+      <PlaybackProgressProvider
+        isPlaying={isPlaying}
+        audioRef={audioRef}
+        ytPlayerRef={ytPlayerRef}
+        currentTrack={currentTrack}
+      >
+        {children}
+      </PlaybackProgressProvider>
       {/* Hidden Official YouTube IFrame Player (kept in active viewport to prevent Chromium compositor suspension) */}
       <div
         id="bytemusic-yt-player-container"
@@ -623,4 +746,8 @@ export const usePlayback = (): PlaybackContextType => {
     throw new Error('usePlayback must be used within a PlaybackProvider');
   }
   return context;
+};
+
+export const usePlaybackProgress = (): PlaybackProgressContextType => {
+  return useContext(PlaybackProgressContext);
 };

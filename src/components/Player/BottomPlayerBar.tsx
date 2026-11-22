@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { usePlayback } from '../../context/PlaybackContext';
+import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext';
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { LiquidGlassSlider } from '../Common/LiquidGlassSlider';
@@ -19,7 +19,7 @@ import {
   Maximize2,
   Sliders,
   Check,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 
 function formatDuration(ms: number): string {
@@ -29,13 +29,36 @@ function formatDuration(ms: number): string {
   return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 }
 
+/**
+ * Isolated high-frequency scrubber component.
+ * Consumes usePlaybackProgress() so ONLY this child re-renders on the 250ms interval,
+ * keeping the parent BottomPlayerBar and its controls completely stationary.
+ */
+const PlayerProgressBar: React.FC<{ seek: (ms: number) => void }> = React.memo(({ seek }) => {
+  const { progressMs, durationMs } = usePlaybackProgress();
+
+  return (
+    <div className="w-full flex items-center gap-3 text-xs text-[#b3b3b3] font-mono">
+      <span className="w-9 text-right">{formatDuration(progressMs)}</span>
+      <div className="flex-1">
+        <LiquidGlassSlider
+          value={progressMs}
+          min={0}
+          max={durationMs || 1}
+          onChange={(newMs) => seek(newMs)}
+          formatTooltip={(ms) => formatDuration(ms)}
+        />
+      </div>
+      <span className="w-9">{formatDuration(durationMs)}</span>
+    </div>
+  );
+});
+
 export const BottomPlayerBar: React.FC = () => {
   const {
     currentTrack,
     isPlaying,
     isLoading,
-    progressMs,
-    durationMs,
     volume,
     isMuted,
     isShuffle,
@@ -59,7 +82,6 @@ export const BottomPlayerBar: React.FC = () => {
 
   if (!currentTrack) return null;
 
-  const progressPercent = durationMs > 0 ? (progressMs / durationMs) * 100 : 0;
   const isCurrentLiked = isLiked(currentTrack.id);
 
   return (
@@ -76,7 +98,11 @@ export const BottomPlayerBar: React.FC = () => {
           <img
             src={currentTrack.album.images[0].url}
             alt={currentTrack.name}
-            className="w-14 h-14 rounded object-cover shadow"
+            loading="lazy"
+            decoding="async"
+            width={56}
+            height={56}
+            className="w-14 h-14 rounded object-cover shadow bg-[#282828] flex-shrink-0"
           />
         )}
         <div className="flex flex-col truncate">
@@ -144,20 +170,8 @@ export const BottomPlayerBar: React.FC = () => {
           </button>
         </div>
 
-        {/* Progress Bar with LiquidGlassSlider */}
-        <div className="w-full flex items-center gap-3 text-xs text-[#b3b3b3] font-mono">
-          <span className="w-9 text-right">{formatDuration(progressMs)}</span>
-          <div className="flex-1">
-            <LiquidGlassSlider
-              value={progressMs}
-              min={0}
-              max={durationMs || 1}
-              onChange={(newMs) => seek(newMs)}
-              formatTooltip={(ms) => formatDuration(ms)}
-            />
-          </div>
-          <span className="w-9">{formatDuration(durationMs)}</span>
-        </div>
+        {/* Isolated Progress Bar with LiquidGlassSlider */}
+        <PlayerProgressBar seek={seek} />
       </div>
 
       {/* Right: Volume & Utility */}

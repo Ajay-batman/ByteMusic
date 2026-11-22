@@ -21,6 +21,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.media.app.NotificationCompat.MediaStyle;
 import androidx.media.session.MediaButtonReceiver;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -37,6 +38,9 @@ public class BackgroundAudioService extends Service {
     // Incremented channel ID to force Android to apply IMPORTANCE_DEFAULT on existing installs
     private static final String CHANNEL_ID = "bytemusic_playback_v5";
     private static final int NOTIFICATION_ID = 1001;
+    private static final int MAX_ARTWORK_DIMENSION = 512;
+
+    public static volatile BackgroundAudioService instance = null;
 
     private PowerManager.WakeLock wakeLock;
     private MediaSessionCompat mediaSession;
@@ -45,6 +49,7 @@ public class BackgroundAudioService extends Service {
     private String trackArtist = "Now Playing";
     private String trackAlbum = "ByteMusic Library";
     private String trackImageUrl = null;
+    private volatile String currentArtworkUrl = null;
     private long trackDurationMs = 0;
     private long currentPositionMs = 0;
     private boolean isPlaying = false;
@@ -52,6 +57,11 @@ public class BackgroundAudioService extends Service {
     private final ExecutorService imageExecutor = Executors.newSingleThreadExecutor();
 
     public static void updateMedia(Context context, String title, String artist, String album, String imageUrl, long durationMs, long positionMs, boolean isPlaying) {
+        BackgroundAudioService service = instance;
+        if (service != null) {
+            service.applyMediaUpdate(title, artist, album, imageUrl, durationMs, positionMs, isPlaying);
+            return;
+        }
         try {
             Intent intent = new Intent(context, BackgroundAudioService.class);
             intent.setAction(ACTION_UPDATE_META);
@@ -69,6 +79,11 @@ public class BackgroundAudioService extends Service {
     }
 
     public static void updatePlaybackState(Context context, boolean isPlaying, long positionMs) {
+        BackgroundAudioService service = instance;
+        if (service != null) {
+            service.applyPlaybackStateUpdate(isPlaying, positionMs);
+            return;
+        }
         try {
             Intent intent = new Intent(context, BackgroundAudioService.class);
             intent.setAction(ACTION_UPDATE_STATE);
@@ -80,43 +95,156 @@ public class BackgroundAudioService extends Service {
         }
     }
 
-    private void loadArtwork(String imageUrl) {
-        if (imageUrl == null || imageUrl.trim().isEmpty() || imageUrl.equals(trackImageUrl)) {
+    public void applyMediaUpdate(String title, String artist, String album, String imageUrl, long durationMs, long positionMs, boolean isPlaying) {
+        if (title != null) trackTitle = title;
+        if (artist != null) trackArtist = artist;
+        if (album != null) trackAlbum = album;
+        if (durationMs > 0) trackDurationMs = durationMs;
+        currentPositionMs = positionMs;
+        this.isPlaying = isPlaying;
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            loadArtwork(imageUrl);
+        }
+        updateNotification();
+    }
+
+    public void applyPlaybackStateUpdate(boolean isPlaying, long positionMs) {
+        this.isPlaying = isPlaying;
+        this.currentPositionMs = positionMs;
+        updateNotification();
+    }
+
+    private void manageWakeLock(boolean shouldHold) {
+        try {
+            if (wakeLock == null) return;
+            if (shouldHold) {
+                if (!wakeLock.isHeld()) {
+                    // 60-minute safety cap to avoid battery drain if app terminated abnormally
+                    wakeLock.acquire(60 * 60 * 1000L);
+                }
+            } else {
+                if (wakeLock.isHeld()) {
+                    wakeLock.release();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadArtwork(final String imageUrl) {
+        if (imageUrl == null || imageUrl.trim().isEmpty() || imageUrl.equals(currentArtworkUrl)) {
             return;
         }
+        currentArtworkUrl = imageUrl;
         trackImageUrl = imageUrl;
         imageExecutor.execute(() -> {
+            HttpURLConnection conn = null;
+            InputStream input = null;
             try {
+                if (!imageUrl.equals(currentArtworkUrl)) {
+                    return;
+                }
+
                 URL url = new URL(imageUrl);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn = (HttpURLConnection) url.openConnection();
                 conn.setDoInput(true);
                 conn.setConnectTimeout(6000);
                 conn.setReadTimeout(6000);
                 conn.connect();
-                InputStream input = conn.getInputStream();
-                Bitmap bitmap = BitmapFactory.decodeStream(input);
-                input.close();
-                conn.disconnect();
-                if (bitmap != null) {
-                    albumArtBitmap = bitmap;
+
+                input = conn.getInputStream();
+                byte[] imageBytes = readStreamToByteArray(input);
+                if (imageBytes == null || imageBytes.length == 0) {
+                    return;
+                }
+
+                if (!imageUrl.equals(currentArtworkUrl)) {
+                    return;
+                }
+
+                // Decode bounds only to calculate downsampling ratio
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = true;
+                BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length, options);
+
+                options.inSampleSize = calculateInSampleSize(options, MAX_ARTWORK_DIMENSION, MAX_ARTWORK_DIMENSION);
+                options.inJustDecodeBounds = false;
+                // RGB_565 reduces memory usage by 50% compared to ARGB_8888 while preserving album cover fidelity
+                options.inPreferredConfig = Bitmap.Config.RGB_565;
+
+                Bitmap downsampledBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length, options);
+
+                if (downsampledBitmap != null) {
+                    if (!imageUrl.equals(currentArtworkUrl)) {
+                        downsampledBitmap.recycle();
+                        return;
+                    }
+
+                    Bitmap oldBitmap = albumArtBitmap;
+                    albumArtBitmap = downsampledBitmap;
                     updateNotification();
+
+                    // Safely recycle old bitmap to release native memory and prevent memory leaks on frequent track skips
+                    if (oldBitmap != null && oldBitmap != albumArtBitmap && !oldBitmap.isRecycled()) {
+                        oldBitmap.recycle();
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                if (input != null) {
+                    try { input.close(); } catch (Exception ignored) {}
+                }
+                if (conn != null) {
+                    conn.disconnect();
+                }
             }
         });
+    }
+
+    private static byte[] readStreamToByteArray(InputStream input) {
+        try {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] data = new byte[8192];
+            int nRead;
+            while ((nRead = input.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+            buffer.flush();
+            return buffer.toByteArray();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        final int height = options.outHeight;
+        final int width = options.outWidth;
+        int inSampleSize = 1;
+
+        if (height > reqHeight || width > reqWidth) {
+            final int halfHeight = height / 2;
+            final int halfWidth = width / 2;
+
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+        return inSampleSize;
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
         createNotificationChannel();
 
         PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (powerManager != null) {
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ByteMusic::MediaWakeLock");
             wakeLock.setReferenceCounted(false);
-            wakeLock.acquire(24 * 60 * 60 * 1000L); // 24 hours max
+            // WakeLock is managed dynamically based on isPlaying state to avoid battery drain when paused
         }
 
         // Initialize Android Native MediaSessionCompat
@@ -290,6 +418,9 @@ public class BackgroundAudioService extends Service {
         } else {
             startForeground(NOTIFICATION_ID, notification);
         }
+
+        // Dynamically manage CPU WakeLock based on active playback state
+        manageWakeLock(isPlaying);
     }
 
     private void createNotificationChannel() {
@@ -365,9 +496,14 @@ public class BackgroundAudioService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        imageExecutor.shutdown();
-        if (wakeLock != null && wakeLock.isHeld()) {
-            wakeLock.release();
+        if (instance == this) {
+            instance = null;
+        }
+        manageWakeLock(false);
+        imageExecutor.shutdownNow();
+        if (albumArtBitmap != null && !albumArtBitmap.isRecycled()) {
+            albumArtBitmap.recycle();
+            albumArtBitmap = null;
         }
         if (mediaSession != null) {
             mediaSession.setActive(false);

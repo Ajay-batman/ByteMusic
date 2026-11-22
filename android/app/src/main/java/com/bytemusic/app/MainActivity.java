@@ -10,7 +10,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
 import com.getcapacitor.BridgeActivity;
+import java.util.Collections;
+import java.util.Set;
 
 public class MainActivity extends BridgeActivity {
     public static MainActivity instance;
@@ -44,6 +48,35 @@ public class MainActivity extends BridgeActivity {
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
+            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            settings.setOffscreenPreRaster(true);
+
+            // Force hardware acceleration layer for smooth 60fps animations & transitions
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
+            // Prevent YouTube iframe from auto-pausing when app is minimized by injecting visibility override into all frames
+            try {
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                    Set<String> origins = Collections.singleton("*");
+                    WebViewCompat.addDocumentStartJavaScript(
+                        webView,
+                        "try {" +
+                        "  Object.defineProperties(document, {" +
+                        "    hidden: { value: false, writable: false }," +
+                        "    visibilityState: { value: 'visible', writable: false }," +
+                        "    webkitHidden: { value: false, writable: false }," +
+                        "    webkitVisibilityState: { value: 'visible', writable: false }" +
+                        "  });" +
+                        "  window.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);" +
+                        "  document.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);" +
+                        "  window.addEventListener('blur', function(e) { e.stopImmediatePropagation(); }, true);" +
+                        "} catch (e) {}",
+                        origins
+                    );
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             // Keep Chromium audio pipeline active without background pause glitches
             webView.getViewTreeObserver().addOnWindowVisibilityChangeListener(visibility -> {
@@ -51,7 +84,9 @@ public class MainActivity extends BridgeActivity {
                     webView.post(() -> {
                         webView.onResume();
                         webView.resumeTimers();
-                        webView.dispatchWindowVisibilityChanged(View.VISIBLE);
+                        if (webView.getWindowVisibility() != View.VISIBLE) {
+                            webView.dispatchWindowVisibilityChanged(View.VISIBLE);
+                        }
                     });
                 }
             });
@@ -74,10 +109,8 @@ public class MainActivity extends BridgeActivity {
     public static void dispatchMediaAction(String action) {
         if (instance != null && instance.bridge != null && instance.bridge.getWebView() != null) {
             instance.runOnUiThread(() -> {
-                instance.bridge.getWebView().evaluateJavascript(
-                    "if (typeof window.bytemusic_mediaAction === 'function') { window.bytemusic_mediaAction('" + action + "'); } else { window.dispatchEvent(new CustomEvent('bytemusic-media-action', { detail: '" + action + "' })); }",
-                    null
-                );
+                String js = "window.bytemusic_mediaAction ? window.bytemusic_mediaAction('" + action + "') : window.dispatchEvent(new CustomEvent('bytemusic-media-action', { detail: '" + action + "' }));";
+                instance.bridge.getWebView().evaluateJavascript(js, null);
             });
         }
     }
@@ -85,10 +118,8 @@ public class MainActivity extends BridgeActivity {
     public static void dispatchMediaSeek(long positionMs) {
         if (instance != null && instance.bridge != null && instance.bridge.getWebView() != null) {
             instance.runOnUiThread(() -> {
-                instance.bridge.getWebView().evaluateJavascript(
-                    "if (typeof window.bytemusic_mediaSeek === 'function') { window.bytemusic_mediaSeek(" + positionMs + "); } else { window.dispatchEvent(new CustomEvent('bytemusic-media-seek', { detail: " + positionMs + " })); }",
-                    null
-                );
+                String js = "window.bytemusic_mediaSeek ? window.bytemusic_mediaSeek(" + positionMs + ") : window.dispatchEvent(new CustomEvent('bytemusic-media-seek', { detail: " + positionMs + " }));";
+                instance.bridge.getWebView().evaluateJavascript(js, null);
             });
         }
     }

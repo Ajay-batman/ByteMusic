@@ -1,18 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { PlaybackProvider } from './context/PlaybackContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { DownloadProvider } from './context/DownloadContext';
 import { SidebarNav } from './components/Sidebar/SidebarNav';
 import { HomeRoute } from './components/Home/HomeRoute';
-import { SearchRoute } from './components/Search/SearchRoute';
-import { PlaylistRoute } from './components/Playlist/PlaylistRoute';
-import { LibraryRoute } from './components/Library/LibraryRoute';
 import { BottomPlayerBar } from './components/Player/BottomPlayerBar';
 import { MobileBottomNav } from './components/Mobile/MobileBottomNav';
 import { MobileMiniPlayer } from './components/Mobile/MobileMiniPlayer';
-import { MobileNowPlaying } from './components/Mobile/MobileNowPlaying';
 import { Playlist } from './types/spotify';
+import { Loader2 } from 'lucide-react';
+
+// Route code splitting for faster startup & reduced initial JS parse time
+const SearchRoute = lazy(() => import('./components/Search/SearchRoute').then((m) => ({ default: m.SearchRoute })));
+const PlaylistRoute = lazy(() => import('./components/Playlist/PlaylistRoute').then((m) => ({ default: m.PlaylistRoute })));
+const LibraryRoute = lazy(() => import('./components/Library/LibraryRoute').then((m) => ({ default: m.LibraryRoute })));
+const MobileNowPlaying = lazy(() => import('./components/Mobile/MobileNowPlaying').then((m) => ({ default: m.MobileNowPlaying })));
+
+const RouteLoadingFallback: React.FC = () => (
+  <div className="flex-1 flex flex-col items-center justify-center p-8 text-[#b3b3b3]">
+    <Loader2 size={32} className="animate-spin text-[#1db954] mb-3" />
+    <span className="text-xs font-medium">Loading view...</span>
+  </div>
+);
 
 const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<'home' | 'search' | 'library' | 'playlist'>('home');
@@ -61,16 +71,18 @@ const AppContent: React.FC = () => {
             isLiquidGlass ? 'glass-panel' : 'bg-[#121212] rounded-lg'
           }`}
         >
-          {currentView === 'home' && <HomeRoute onSelectPlaylist={handleSelectPlaylist} />}
-          {currentView === 'search' && <SearchRoute />}
-          {currentView === 'library' && <LibraryRoute onSelectPlaylist={handleSelectPlaylist} />}
-          {currentView === 'playlist' && selectedPlaylist && (
-            <PlaylistRoute
-              playlist={selectedPlaylist}
-              onSelectPlaylist={handleSelectPlaylist}
-              onBack={() => setCurrentView('library')}
-            />
-          )}
+          <Suspense fallback={<RouteLoadingFallback />}>
+            {currentView === 'home' && <HomeRoute onSelectPlaylist={handleSelectPlaylist} />}
+            {currentView === 'search' && <SearchRoute />}
+            {currentView === 'library' && <LibraryRoute onSelectPlaylist={handleSelectPlaylist} />}
+            {currentView === 'playlist' && selectedPlaylist && (
+              <PlaylistRoute
+                playlist={selectedPlaylist}
+                onSelectPlaylist={handleSelectPlaylist}
+                onBack={() => setCurrentView('library')}
+              />
+            )}
+          </Suspense>
         </main>
       </div>
 
@@ -85,7 +97,9 @@ const AppContent: React.FC = () => {
 
       {/* Mobile Expandable Now Playing Screen */}
       {isMobilePlayerOpen && (
-        <MobileNowPlaying onClose={() => setIsMobilePlayerOpen(false)} />
+        <Suspense fallback={null}>
+          <MobileNowPlaying onClose={() => setIsMobilePlayerOpen(false)} />
+        </Suspense>
       )}
     </div>
   );

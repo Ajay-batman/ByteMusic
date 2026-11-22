@@ -80,7 +80,10 @@ export const PlaylistRoute: React.FC<PlaylistRouteProps> = ({ playlist, onSelect
           <img
             src={playlist.images[0].url}
             alt={playlist.name}
-            className="w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded shadow-2xl object-cover flex-shrink-0"
+            decoding="async"
+            width={224}
+            height={224}
+            className="w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded shadow-2xl object-cover flex-shrink-0 bg-[#282828]"
           />
         ) : (
           <div className="w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded bg-[#282828] flex items-center justify-center flex-shrink-0 shadow-2xl">

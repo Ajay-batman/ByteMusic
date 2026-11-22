@@ -320,23 +320,39 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [allPlaylists]
   );
 
+  const contextValue = useMemo<LibraryContextType>(
+    () => ({
+      likedTracks,
+      isLiked,
+      toggleLike,
+      recentlyPlayed,
+      clearRecentlyPlayed,
+      customPlaylists,
+      createPlaylist,
+      addTrackToPlaylist,
+      removeTrackFromPlaylist,
+      deletePlaylist,
+      allPlaylists,
+      getPlaylistById,
+    }),
+    [
+      likedTracks,
+      isLiked,
+      toggleLike,
+      recentlyPlayed,
+      clearRecentlyPlayed,
+      customPlaylists,
+      createPlaylist,
+      addTrackToPlaylist,
+      removeTrackFromPlaylist,
+      deletePlaylist,
+      allPlaylists,
+      getPlaylistById,
+    ]
+  );
+
   return (
-    <LibraryContext.Provider
-      value={{
-        likedTracks,
-        isLiked,
-        toggleLike,
-        recentlyPlayed,
-        clearRecentlyPlayed,
-        customPlaylists,
-        createPlaylist,
-        addTrackToPlaylist,
-        removeTrackFromPlaylist,
-        deletePlaylist,
-        allPlaylists,
-        getPlaylistById,
-      }}
-    >
+    <LibraryContext.Provider value={contextValue}>
       {children}
     </LibraryContext.Provider>
   );

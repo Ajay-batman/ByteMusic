@@ -40,25 +40,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         }`}
       >
         {/* Brand Header */}
-        <div className="flex items-center gap-2.5 px-1 py-1 mb-1">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1db954] to-[#10b981] flex items-center justify-center shadow-lg shadow-[#1db954]/20 flex-shrink-0">
-            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-black">
-              <path
-                d="M4 6C4 4.89543 4.89543 4 6 4H14C16.2091 4 18 5.79086 18 8C18 9.38241 17.3007 10.6015 16.2361 11.3246C17.8878 12.0152 19 13.6288 19 15.5C19 18.5376 16.5376 21 13.5 21H6C4.89543 21 4 20.1046 4 19V6Z"
-                fill="currentColor"
-              />
-              <circle cx="10" cy="8.5" r="1.5" fill="#1db954" />
-              <circle cx="10" cy="15.5" r="1.5" fill="#1db954" />
-            </svg>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base font-black tracking-tight text-white leading-none">
-              Byte<span className="text-[#1db954]">Music</span>
-            </span>
-            <span className="text-[10px] text-[#b3b3b3] font-medium tracking-wider uppercase mt-0.5">
-              High-Fidelity Audio
-            </span>
-          </div>
+        <div className="flex items-center px-1 py-1 mb-1">
+          <img
+            src="/bytemusic-logo.svg"
+            alt="ByteMusic"
+            className="h-8 w-auto object-contain"
+          />
         </div>
 
         <button
@@ -165,7 +152,11 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                   <img
                     src={pl.images[0].url}
                     alt={pl.name}
-                    className="w-12 h-12 rounded object-cover flex-shrink-0"
+                    loading="lazy"
+                    decoding="async"
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 rounded object-cover flex-shrink-0 bg-[#282828]"
                   />
                 ) : (
                   <div className="w-12 h-12 rounded bg-[#282828] flex items-center justify-center flex-shrink-0">

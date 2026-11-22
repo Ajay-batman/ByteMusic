@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePlayback } from '../../context/PlaybackContext';
+import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext';
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Play, Pause, Heart, Loader2 } from 'lucide-react';
@@ -8,14 +8,32 @@ interface MobileMiniPlayerProps {
   onOpenFullPlayer: () => void;
 }
 
+/**
+ * Isolated thin progress line indicator.
+ * Consumes usePlaybackProgress() so ONLY this 2.5px line recalculates its width every 250ms,
+ * preventing the entire MobileMiniPlayer from re-rendering.
+ */
+const MiniProgressBar: React.FC = React.memo(() => {
+  const { progressMs, durationMs } = usePlaybackProgress();
+  const progressPercent = durationMs > 0 ? (progressMs / durationMs) * 100 : 0;
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white/10 rounded-b-lg overflow-hidden">
+      <div
+        style={{ width: `${progressPercent}%` }}
+        className="h-full bg-[#1db954] transition-all duration-100"
+      />
+    </div>
+  );
+});
+
 export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPlayer }) => {
-  const { currentTrack, isPlaying, isLoading, progressMs, durationMs, togglePlay } = usePlayback();
+  const { currentTrack, isPlaying, isLoading, togglePlay } = usePlayback();
   const { isLiked, toggleLike } = useLibrary();
   const { isLiquidGlass } = useTheme();
 
   if (!currentTrack) return null;
 
-  const progressPercent = durationMs > 0 ? (progressMs / durationMs) * 100 : 0;
   const liked = isLiked(currentTrack.id);
 
   return (
@@ -33,7 +51,11 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
           <img
             src={currentTrack.album.images[0].url}
             alt={currentTrack.name}
-            className="w-10 h-10 rounded object-cover flex-shrink-0 shadow-sm"
+            loading="lazy"
+            decoding="async"
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded object-cover flex-shrink-0 shadow-sm bg-[#282828]"
           />
         )}
         <div className="flex flex-col truncate">
@@ -81,12 +103,7 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
       </div>
 
       {/* Bottom Mini Progress Indicator Line */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white/10 rounded-b-lg overflow-hidden">
-        <div
-          style={{ width: `${progressPercent}%` }}
-          className="h-full bg-[#1db954] transition-all duration-100"
-        />
-      </div>
+      <MiniProgressBar />
     </div>
   );
 };

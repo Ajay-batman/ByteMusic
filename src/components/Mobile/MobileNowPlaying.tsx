@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { usePlayback } from '../../context/PlaybackContext';
+import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext';
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { LiquidGlassSlider } from '../Common/LiquidGlassSlider';
@@ -32,13 +32,36 @@ function formatDuration(ms: number): string {
   return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 }
 
+/**
+ * Isolated Scrubber Slider for Mobile Now Playing Screen.
+ * Subscribes to usePlaybackProgress() so ONLY the slider and time labels re-render every 250ms,
+ * preserving 60fps animations and avoiding image re-render jank.
+ */
+const NowPlayingProgressBar: React.FC<{ seek: (ms: number) => void }> = React.memo(({ seek }) => {
+  const { progressMs, durationMs } = usePlaybackProgress();
+
+  return (
+    <div className="flex flex-col gap-1">
+      <LiquidGlassSlider
+        value={progressMs}
+        min={0}
+        max={durationMs || 1}
+        onChange={(newMs) => seek(newMs)}
+        formatTooltip={(ms) => formatDuration(ms)}
+      />
+      <div className="flex items-center justify-between text-xs font-mono text-[#b3b3b3] px-1">
+        <span>{formatDuration(progressMs)}</span>
+        <span>{formatDuration(durationMs)}</span>
+      </div>
+    </div>
+  );
+});
+
 export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) => {
   const {
     currentTrack,
     isPlaying,
     isLoading,
-    progressMs,
-    durationMs,
     isShuffle,
     repeatMode,
     audioQuality,
@@ -94,7 +117,10 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
           <img
             src={currentTrack.album.images[0].url}
             alt={currentTrack.name}
-            className={`w-full max-w-[320px] aspect-square object-cover rounded-xl shadow-2xl ${
+            decoding="async"
+            width={320}
+            height={320}
+            className={`w-full max-w-[320px] aspect-square object-cover rounded-xl shadow-2xl bg-[#282828] ${
               isLiquidGlass ? 'border border-white/20' : ''
             }`}
           />
@@ -133,19 +159,7 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
         </div>
 
         {/* Scrubber Progress Slider */}
-        <div className="flex flex-col gap-1">
-          <LiquidGlassSlider
-            value={progressMs}
-            min={0}
-            max={durationMs || 1}
-            onChange={(newMs) => seek(newMs)}
-            formatTooltip={(ms) => formatDuration(ms)}
-          />
-          <div className="flex items-center justify-between text-xs font-mono text-[#b3b3b3] px-1">
-            <span>{formatDuration(progressMs)}</span>
-            <span>{formatDuration(durationMs)}</span>
-          </div>
-        </div>
+        <NowPlayingProgressBar seek={seek} />
 
         {/* Master Playback Controls */}
         <div className="flex items-center justify-between px-2">
