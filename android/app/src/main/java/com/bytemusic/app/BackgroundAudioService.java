@@ -14,9 +14,11 @@ import android.os.PowerManager;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.view.KeyEvent;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.media.app.NotificationCompat.MediaStyle;
+import androidx.media.session.MediaButtonReceiver;
 
 public class BackgroundAudioService extends Service {
     public static final String ACTION_TOGGLE = "com.bytemusic.app.ACTION_TOGGLE";
@@ -24,7 +26,8 @@ public class BackgroundAudioService extends Service {
     public static final String ACTION_PREV = "com.bytemusic.app.ACTION_PREV";
     public static final String ACTION_UPDATE_META = "com.bytemusic.app.ACTION_UPDATE_META";
 
-    private static final String CHANNEL_ID = "bytemusic_media_playback";
+    // Incremented channel ID to force Android to apply IMPORTANCE_DEFAULT on existing installs
+    private static final String CHANNEL_ID = "bytemusic_playback_v3";
     private static final int NOTIFICATION_ID = 1001;
 
     private PowerManager.WakeLock wakeLock;
@@ -61,18 +64,35 @@ public class BackgroundAudioService extends Service {
             wakeLock.acquire(24 * 60 * 60 * 1000L); // 24 hours max
         }
 
-        // Initialize Native Android MediaSessionCompat
+        // Initialize Android Native MediaSessionCompat
         mediaSession = new MediaSessionCompat(this, "ByteMusicSession");
-        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        mediaSession.setFlags(
+                MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+        );
+
+        // Wire system media button receiver
+        Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
+        mediaButtonIntent.setClass(this, MediaButtonReceiver.class);
+        PendingIntent mbrPendingIntent = PendingIntent.getBroadcast(
+                this, 0, mediaButtonIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+        mediaSession.setMediaButtonReceiver(mbrPendingIntent);
+
         mediaSession.setCallback(new MediaSessionCompat.Callback() {
             @Override
             public void onPlay() {
-                MainActivity.dispatchMediaAction("toggle");
+                isPlaying = true;
+                updateNotification();
+                MainActivity.dispatchMediaAction("play");
             }
 
             @Override
             public void onPause() {
-                MainActivity.dispatchMediaAction("toggle");
+                isPlaying = false;
+                updateNotification();
+                MainActivity.dispatchMediaAction("pause");
             }
 
             @Override
@@ -83,6 +103,34 @@ public class BackgroundAudioService extends Service {
             @Override
             public void onSkipToPrevious() {
                 MainActivity.dispatchMediaAction("prev");
+            }
+
+            @Override
+            public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
+                if (mediaButtonEvent != null && Intent.ACTION_MEDIA_BUTTON.equals(mediaButtonEvent.getAction())) {
+                    KeyEvent event = mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                    if (event != null && event.getAction() == KeyEvent.ACTION_DOWN) {
+                        switch (event.getKeyCode()) {
+                            case KeyEvent.KEYCODE_MEDIA_PLAY:
+                                onPlay();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_PAUSE:
+                                onPause();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+                            case KeyEvent.KEYCODE_HEADSETHOOK:
+                                if (isPlaying) onPause(); else onPlay();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_NEXT:
+                                onSkipToNext();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                                onSkipToPrevious();
+                                return true;
+                        }
+                    }
+                }
+                return super.onMediaButtonEvent(mediaButtonEvent);
             }
         });
         mediaSession.setActive(true);
@@ -111,15 +159,10 @@ public class BackgroundAudioService extends Service {
                 .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, trackAlbum);
         mediaSession.setMetadata(metaBuilder.build());
 
-        // Pending Intents for Action buttons
-        Intent prevIntent = new Intent(this, BackgroundAudioService.class).setAction(ACTION_PREV);
-        PendingIntent prevPending = PendingIntent.getService(this, 1, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        Intent toggleIntent = new Intent(this, BackgroundAudioService.class).setAction(ACTION_TOGGLE);
-        PendingIntent togglePending = PendingIntent.getService(this, 2, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        Intent nextIntent = new Intent(this, BackgroundAudioService.class).setAction(ACTION_NEXT);
-        PendingIntent nextPending = PendingIntent.getService(this, 3, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        // Official MediaButtonReceiver action pending intents: immune to Android background limits!
+        PendingIntent prevPending = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS);
+        PendingIntent togglePending = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE);
+        PendingIntent nextPending = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT);
 
         Intent openAppIntent = new Intent(this, MainActivity.class);
         PendingIntent contentPending = PendingIntent.getActivity(this, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -150,10 +193,11 @@ public class BackgroundAudioService extends Service {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // IMPORTANCE_DEFAULT ensures visibility on Lock Screen and modern SystemUI Media Card
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     "ByteMusic Playback Controls",
-                    NotificationManager.IMPORTANCE_LOW
+                    NotificationManager.IMPORTANCE_DEFAULT
             );
             channel.setDescription("Controls for ByteMusic playback on lock screen and notification panel");
             channel.setShowBadge(false);
@@ -167,7 +211,10 @@ public class BackgroundAudioService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && intent.getAction() != null) {
+        if (intent != null) {
+            // Handle official media button events from notification panel & lock screen
+            MediaButtonReceiver.handleIntent(mediaSession, intent);
+
             String action = intent.getAction();
             if (ACTION_UPDATE_META.equals(action)) {
                 String title = intent.getStringExtra("title");
@@ -178,12 +225,6 @@ public class BackgroundAudioService extends Service {
                 if (album != null) trackAlbum = album;
                 isPlaying = intent.getBooleanExtra("isPlaying", isPlaying);
                 updateNotification();
-            } else if (ACTION_TOGGLE.equals(action)) {
-                MainActivity.dispatchMediaAction("toggle");
-            } else if (ACTION_NEXT.equals(action)) {
-                MainActivity.dispatchMediaAction("next");
-            } else if (ACTION_PREV.equals(action)) {
-                MainActivity.dispatchMediaAction("prev");
             }
         }
         return START_STICKY;

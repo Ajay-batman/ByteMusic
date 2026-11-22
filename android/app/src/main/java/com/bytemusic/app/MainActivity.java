@@ -47,7 +47,7 @@ public class MainActivity extends BridgeActivity {
         if (instance != null && instance.bridge != null && instance.bridge.getWebView() != null) {
             instance.runOnUiThread(() -> {
                 instance.bridge.getWebView().evaluateJavascript(
-                    "window.dispatchEvent(new CustomEvent('bytemusic-media-action', { detail: '" + action + "' }));",
+                    "if (typeof window.bytemusic_mediaAction === 'function') { window.bytemusic_mediaAction('" + action + "'); } else { window.dispatchEvent(new CustomEvent('bytemusic-media-action', { detail: '" + action + "' })); }",
                     null
                 );
             });

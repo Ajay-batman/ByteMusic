@@ -468,10 +468,13 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Listen for Native Android Lock Screen & Notification Action Commands
   useEffect(() => {
-    const handleNativeMediaAction = (event: any) => {
-      const action = event?.detail;
+    const executeAction = (action: string) => {
       if (action === 'toggle') {
         togglePlay();
+      } else if (action === 'play') {
+        resumeInternal();
+      } else if (action === 'pause') {
+        pauseInternal();
       } else if (action === 'next') {
         handleNextTrackInternal();
       } else if (action === 'prev') {
@@ -479,11 +482,21 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
+    (window as any).bytemusic_mediaAction = executeAction;
+
+    const handleNativeMediaAction = (event: any) => {
+      const action = event?.detail;
+      if (action) {
+        executeAction(action);
+      }
+    };
+
     window.addEventListener('bytemusic-media-action', handleNativeMediaAction);
     return () => {
+      delete (window as any).bytemusic_mediaAction;
       window.removeEventListener('bytemusic-media-action', handleNativeMediaAction);
     };
-  }, [togglePlay, handleNextTrackInternal, handlePrevTrackInternal]);
+  }, [togglePlay, pauseInternal, handleNextTrackInternal, handlePrevTrackInternal]);
 
   const pause = useCallback(() => {
     pauseInternal();
