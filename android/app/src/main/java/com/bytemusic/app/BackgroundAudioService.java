@@ -27,7 +27,7 @@ public class BackgroundAudioService extends Service {
     public static final String ACTION_UPDATE_META = "com.bytemusic.app.ACTION_UPDATE_META";
 
     // Incremented channel ID to force Android to apply IMPORTANCE_DEFAULT on existing installs
-    private static final String CHANNEL_ID = "bytemusic_playback_v3";
+    private static final String CHANNEL_ID = "bytemusic_playback_v4";
     private static final int NOTIFICATION_ID = 1001;
 
     private PowerManager.WakeLock wakeLock;
@@ -97,11 +97,13 @@ public class BackgroundAudioService extends Service {
 
             @Override
             public void onSkipToNext() {
+                updateNotification();
                 MainActivity.dispatchMediaAction("next");
             }
 
             @Override
             public void onSkipToPrevious() {
+                updateNotification();
                 MainActivity.dispatchMediaAction("prev");
             }
 
@@ -159,10 +161,18 @@ public class BackgroundAudioService extends Service {
                 .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, trackAlbum);
         mediaSession.setMetadata(metaBuilder.build());
 
-        // Official MediaButtonReceiver action pending intents: immune to Android background limits!
-        PendingIntent prevPending = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS);
-        PendingIntent togglePending = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE);
-        PendingIntent nextPending = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT);
+        // Direct Service PendingIntents for playback actions
+        Intent prevIntent = new Intent(this, BackgroundAudioService.class).setAction(ACTION_PREV);
+        PendingIntent prevPending = PendingIntent.getService(this, 101, prevIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent toggleIntent = new Intent(this, BackgroundAudioService.class).setAction(ACTION_TOGGLE);
+        PendingIntent togglePending = PendingIntent.getService(this, 102, toggleIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent nextIntent = new Intent(this, BackgroundAudioService.class).setAction(ACTION_NEXT);
+        PendingIntent nextPending = PendingIntent.getService(this, 103, nextIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         Intent openAppIntent = new Intent(this, MainActivity.class);
         PendingIntent contentPending = PendingIntent.getActivity(this, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -175,6 +185,8 @@ public class BackgroundAudioService extends Service {
                 .setContentIntent(contentPending)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+                .setOnlyAlertOnce(true)
                 .setOngoing(isPlaying)
                 .addAction(android.R.drawable.ic_media_previous, "Previous", prevPending)
                 .addAction(isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play, isPlaying ? "Pause" : "Play", togglePending)
@@ -202,6 +214,8 @@ public class BackgroundAudioService extends Service {
             channel.setDescription("Controls for ByteMusic playback on lock screen and notification panel");
             channel.setShowBadge(false);
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            channel.setSound(null, null);
+            channel.enableVibration(false);
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
@@ -212,11 +226,28 @@ public class BackgroundAudioService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
-            // Handle official media button events from notification panel & lock screen
-            MediaButtonReceiver.handleIntent(mediaSession, intent);
-
             String action = intent.getAction();
-            if (ACTION_UPDATE_META.equals(action)) {
+            if (ACTION_TOGGLE.equals(action)) {
+                if (isPlaying) {
+                    if (mediaSession != null && mediaSession.getController() != null) {
+                        mediaSession.getController().getTransportControls().pause();
+                    }
+                } else {
+                    if (mediaSession != null && mediaSession.getController() != null) {
+                        mediaSession.getController().getTransportControls().play();
+                    }
+                }
+            } else if (ACTION_NEXT.equals(action)) {
+                if (mediaSession != null && mediaSession.getController() != null) {
+                    mediaSession.getController().getTransportControls().skipToNext();
+                }
+            } else if (ACTION_PREV.equals(action)) {
+                if (mediaSession != null && mediaSession.getController() != null) {
+                    mediaSession.getController().getTransportControls().skipToPrevious();
+                }
+            } else if (Intent.ACTION_MEDIA_BUTTON.equals(action)) {
+                MediaButtonReceiver.handleIntent(mediaSession, intent);
+            } else if (ACTION_UPDATE_META.equals(action)) {
                 String title = intent.getStringExtra("title");
                 String artist = intent.getStringExtra("artist");
                 String album = intent.getStringExtra("album");
@@ -224,9 +255,10 @@ public class BackgroundAudioService extends Service {
                 if (artist != null) trackArtist = artist;
                 if (album != null) trackAlbum = album;
                 isPlaying = intent.getBooleanExtra("isPlaying", isPlaying);
-                updateNotification();
             }
         }
+        // Ensure startForeground is always satisfied on every onStartCommand
+        updateNotification();
         return START_STICKY;
     }
 
