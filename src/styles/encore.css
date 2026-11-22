@@ -226,3 +226,44 @@ body {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.12) !important;
 }
 
+/* 5. Velvet & Lime Aesthetic Theme (Dribbble Aesthetic Dark UI) */
+.velvet-lime-bg {
+  background-color: #0b0b10;
+  background-image: 
+    radial-gradient(ellipse 70% 45% at 20% 0%, rgba(216, 180, 254, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 10%, rgba(249, 115, 22, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 60% at 50% 90%, rgba(210, 248, 67, 0.08) 0%, transparent 70%);
+  background-attachment: fixed;
+}
+
+.theme-velvet-lime .glass-panel {
+  background: rgba(18, 18, 26, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+.theme-velvet-lime .glass-card {
+  background: #14141d !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 1.25rem !important;
+}
+
+.theme-velvet-lime .glass-card:hover {
+  background: #1c1c28 !important;
+  border-color: rgba(210, 248, 67, 0.45) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 16px rgba(210, 248, 67, 0.12) !important;
+}
+
+.theme-velvet-lime .glass-player {
+  background: rgba(18, 18, 26, 0.94) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7) !important;
+}
+
+.theme-velvet-lime .glass-pill {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+

@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type AppTheme = 'dark' | 'liquid-glass' | 'cyberpunk' | 'amoled' | 'aurora';
+export type AppTheme = 'dark' | 'liquid-glass' | 'velvet-lime' | 'cyberpunk' | 'amoled' | 'aurora';
 
 export interface ThemeDefinition {
   id: AppTheme;
   name: string;
-  category: 'Classic' | 'Glass' | 'Vibrant' | 'Minimalist';
+  category: 'Classic' | 'Glass' | 'Aesthetic' | 'Vibrant' | 'Minimalist';
   description: string;
   previewColors: string[];
   accentColor: string;
@@ -19,6 +19,14 @@ export const THEME_REGISTRY: Record<AppTheme, ThemeDefinition> = {
     description: 'Iconic obsidian black with signature Spotify electric green accents.',
     previewColors: ['#121212', '#282828', '#1db954'],
     accentColor: '#1db954',
+  },
+  'velvet-lime': {
+    id: 'velvet-lime',
+    name: 'Velvet & Lime',
+    category: 'Aesthetic',
+    description: 'Dribbble-inspired velvet dark with electric acid lime and pastel lavender cards.',
+    previewColors: ['#0B0B10', '#D2F843', '#D8B4FE'],
+    accentColor: '#D2F843',
   },
   'liquid-glass': {
     id: 'liquid-glass',
@@ -59,6 +67,7 @@ interface ThemeContextType {
   setTheme: (theme: AppTheme) => void;
   toggleTheme: () => void;
   isLiquidGlass: boolean;
+  isVelvetLime: boolean;
   isCyberpunk: boolean;
   isAmoled: boolean;
   isAurora: boolean;
@@ -104,7 +113,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Sync document root class for theme CSS cascades
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('theme-dark', 'theme-liquid-glass', 'theme-cyberpunk', 'theme-amoled', 'theme-aurora');
+    root.classList.remove('theme-dark', 'theme-liquid-glass', 'theme-velvet-lime', 'theme-cyberpunk', 'theme-amoled', 'theme-aurora');
     root.classList.add(`theme-${theme}`);
   }, [theme]);
 
@@ -117,6 +126,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setTheme,
         toggleTheme,
         isLiquidGlass: theme === 'liquid-glass',
+        isVelvetLime: theme === 'velvet-lime',
         isCyberpunk: theme === 'cyberpunk',
         isAmoled: theme === 'amoled',
         isAurora: theme === 'aurora',

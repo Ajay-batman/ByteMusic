@@ -75,7 +75,7 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
   } = usePlayback();
 
   const { isLiked, toggleLike } = useLibrary();
-  const { isLiquidGlass } = useTheme();
+  const { isLiquidGlass, isVelvetLime, currentThemeDef } = useTheme();
   const [showQualityMenu, setShowQualityMenu] = useState(false);
 
   if (!currentTrack) return null;
@@ -85,7 +85,9 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
   return (
     <div
       className={`fixed inset-0 z-50 md:hidden flex flex-col justify-between p-6 select-none animate-in fade-in slide-in-from-bottom-10 duration-300 ${
-        isLiquidGlass
+        isVelvetLime
+          ? 'velvet-lime-bg text-white'
+          : isLiquidGlass
           ? 'liquid-glass-bg text-white'
           : 'bg-gradient-to-b from-[#3a3a3a] via-[#121212] to-black text-white'
       }`}
@@ -100,7 +102,7 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
         </button>
         <div className="flex flex-col items-center">
           <span className="text-[10px] uppercase font-bold tracking-widest text-[#b3b3b3]">
-            PLAYING FROM PLAYLIST
+            {isVelvetLime ? 'NOW PLAYING' : 'PLAYING FROM PLAYLIST'}
           </span>
           <span className="text-xs font-bold text-white truncate max-w-[200px]">
             {currentTrack.album.name}
@@ -111,8 +113,11 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
         </button>
       </div>
 
-      {/* Center: Large Album Art */}
-      <div className="flex items-center justify-center my-auto py-4">
+      {/* Center: Large Album Art (Circular Vinyl on Velvet & Lime theme) */}
+      <div className="flex items-center justify-center my-auto py-4 relative">
+        {isVelvetLime && (
+          <div className="absolute w-64 h-64 rounded-full bg-gradient-to-tr from-[#D8B4FE]/25 to-[#D2F843]/20 blur-2xl pointer-events-none" />
+        )}
         {currentTrack.album.images[0] ? (
           <img
             src={currentTrack.album.images[0].url}
@@ -120,12 +125,16 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
             decoding="async"
             width={320}
             height={320}
-            className={`w-full max-w-[320px] aspect-square object-cover rounded-xl shadow-2xl bg-[#282828] ${
-              isLiquidGlass ? 'border border-white/20' : ''
+            className={`w-full max-w-[300px] aspect-square object-cover shadow-2xl bg-[#282828] relative z-10 ${
+              isVelvetLime
+                ? 'rounded-full border-4 border-white/20 shadow-[0_0_60px_rgba(210,248,67,0.2)]'
+                : isLiquidGlass
+                ? 'rounded-2xl border border-white/20'
+                : 'rounded-xl'
             }`}
           />
         ) : (
-          <div className="w-full max-w-[320px] aspect-square rounded-xl bg-[#282828] flex items-center justify-center shadow-2xl">
+          <div className="w-full max-w-[300px] aspect-square rounded-full bg-[#282828] flex items-center justify-center shadow-2xl relative z-10">
             <span className="text-6xl text-[#757575]">♪</span>
           </div>
         )}
@@ -134,29 +143,43 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
       {/* Bottom Area: Info, Scrubber & Controls */}
       <div className="flex flex-col gap-4 pb-4">
         {/* Title, Artist & Like */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col truncate mr-4">
-            <span className="text-xl font-bold text-white truncate">
+        {isVelvetLime ? (
+          <div className="flex flex-col items-center text-center my-1">
+            <span className="text-2xl font-black text-white tracking-tight">
               {currentTrack.name}
             </span>
-            <span className="text-sm text-[#b3b3b3] truncate">
+            <span className="text-sm font-semibold text-[#D8B4FE] mt-0.5">
               {currentTrack.artists.map((a) => a.name).join(', ')}
             </span>
+            <p className="text-xs text-[#a0a0b8] italic mt-2.5 max-w-[280px] line-clamp-2">
+              "Whispers in the midnight breeze, carrying dreams across the seas..."
+            </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <DownloadButton track={currentTrack} size={24} />
-            <button
-              onClick={() => toggleLike(currentTrack)}
-              className="p-2 transition-transform hover:scale-110 flex-shrink-0"
-            >
-              {liked ? (
-                <Heart size={24} className="text-[#1db954] fill-[#1db954]" />
-              ) : (
-                <Heart size={24} className="text-[#b3b3b3]" />
-              )}
-            </button>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col truncate mr-4">
+              <span className="text-xl font-bold text-white truncate">
+                {currentTrack.name}
+              </span>
+              <span className="text-sm text-[#b3b3b3] truncate">
+                {currentTrack.artists.map((a) => a.name).join(', ')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <DownloadButton track={currentTrack} size={24} />
+              <button
+                onClick={() => toggleLike(currentTrack)}
+                className="p-2 transition-transform hover:scale-110 flex-shrink-0"
+              >
+                {liked ? (
+                  <Heart size={24} className="text-[#1db954] fill-[#1db954]" />
+                ) : (
+                  <Heart size={24} className="text-[#b3b3b3]" />
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Scrubber Progress Slider */}
         <NowPlayingProgressBar seek={seek} />
@@ -166,8 +189,9 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
           <button
             onClick={toggleShuffle}
             className={`p-2 transition-colors ${
-              isShuffle ? 'text-[#1db954]' : 'text-[#b3b3b3]'
+              isShuffle ? 'text-white' : 'text-[#b3b3b3]'
             }`}
+            style={{ color: isShuffle ? currentThemeDef.accentColor : undefined }}
           >
             <Shuffle size={20} />
           </button>
@@ -180,7 +204,11 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-2xl"
+            className={`w-16 h-16 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-2xl ${
+              isVelvetLime
+                ? 'bg-[#D2F843] text-black shadow-[0_0_30px_rgba(210,248,67,0.35)]'
+                : 'bg-white text-black'
+            }`}
           >
             {isLoading ? (
               <Loader2 size={24} className="animate-spin text-black" />
@@ -199,8 +227,9 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
           <button
             onClick={toggleRepeat}
             className={`p-2 transition-colors ${
-              repeatMode !== 'off' ? 'text-[#1db954]' : 'text-[#b3b3b3]'
+              repeatMode !== 'off' ? 'text-white' : 'text-[#b3b3b3]'
             }`}
+            style={{ color: repeatMode !== 'off' ? currentThemeDef.accentColor : undefined }}
           >
             {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
           </button>

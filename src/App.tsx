@@ -42,6 +42,8 @@ const AppContent: React.FC = () => {
   const themeBgClass =
     theme === 'liquid-glass'
       ? 'liquid-glass-bg text-white'
+      : theme === 'velvet-lime'
+      ? 'velvet-lime-bg text-white'
       : theme === 'cyberpunk'
       ? 'cyberpunk-bg text-white'
       : theme === 'amoled'

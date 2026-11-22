@@ -28,9 +28,10 @@ export const LiquidGlassSlider: React.FC<LiquidGlassSliderProps> = ({
   onChange,
   formatTooltip,
   className = '',
-  accentColor = '#30d158',
+  accentColor,
 }) => {
-  const { isLiquidGlass } = useTheme();
+  const { isLiquidGlass, currentThemeDef } = useTheme();
+  const effectiveAccent = accentColor || currentThemeDef?.accentColor || '#30d158';
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -129,7 +130,7 @@ export const LiquidGlassSlider: React.FC<LiquidGlassSliderProps> = ({
         <div
           style={{
             width: `${activePercent}%`,
-            background: `linear-gradient(90deg, #10b981 0%, ${accentColor} 100%)`,
+            background: `linear-gradient(90deg, ${effectiveAccent}88 0%, ${effectiveAccent} 100%)`,
           }}
           className="h-full rounded-full relative transition-all duration-75 shadow-[0_0_10px_rgba(48,209,88,0.4)]"
         >

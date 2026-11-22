@@ -13,6 +13,8 @@ export const ThemePickerModal: React.FC = () => {
     switch (id) {
       case 'dark':
         return <Moon size={16} className="text-[#1db954]" />;
+      case 'velvet-lime':
+        return <Sparkles size={16} className="text-[#D2F843]" />;
       case 'liquid-glass':
         return <Sparkles size={16} className="text-cyan-300" />;
       case 'cyberpunk':
