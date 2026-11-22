@@ -67,9 +67,15 @@ public class MainActivity extends BridgeActivity {
                         "    webkitHidden: { value: false, writable: false }," +
                         "    webkitVisibilityState: { value: 'visible', writable: false }" +
                         "  });" +
+                        "  if (typeof document.hasFocus === 'function') { document.hasFocus = function() { return true; }; }" +
+                        "  try { Object.defineProperty(document, 'onvisibilitychange', { get: function() { return null; }, set: function() {} }); } catch (e) {}" +
+                        "  try { Object.defineProperty(window, 'onpagehide', { get: function() { return null; }, set: function() {} }); } catch (e) {}" +
+                        "  try { Object.defineProperty(window, 'onblur', { get: function() { return null; }, set: function() {} }); } catch (e) {}" +
                         "  window.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);" +
                         "  document.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);" +
                         "  window.addEventListener('blur', function(e) { e.stopImmediatePropagation(); }, true);" +
+                        "  window.addEventListener('pagehide', function(e) { e.stopImmediatePropagation(); }, true);" +
+                        "  window.addEventListener('freeze', function(e) { e.stopImmediatePropagation(); }, true);" +
                         "} catch (e) {}",
                         origins
                     );
@@ -77,19 +83,6 @@ public class MainActivity extends BridgeActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
-            // Keep Chromium audio pipeline active without background pause glitches
-            webView.getViewTreeObserver().addOnWindowVisibilityChangeListener(visibility -> {
-                if (visibility != View.VISIBLE) {
-                    webView.post(() -> {
-                        webView.onResume();
-                        webView.resumeTimers();
-                        if (webView.getWindowVisibility() != View.VISIBLE) {
-                            webView.dispatchWindowVisibilityChanged(View.VISIBLE);
-                        }
-                    });
-                }
-            });
 
             // Native Media Bridge: Syncs web playback state with Android Lock Screen & Notification
             webView.addJavascriptInterface(new Object() {
@@ -155,7 +148,6 @@ public class MainActivity extends BridgeActivity {
             WebView webView = this.bridge.getWebView();
             webView.onResume();
             webView.resumeTimers();
-            webView.dispatchWindowVisibilityChanged(View.VISIBLE);
         }
     }
 

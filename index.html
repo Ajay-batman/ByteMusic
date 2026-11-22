@@ -25,9 +25,15 @@
         if (typeof document.hasFocus === 'function') {
           document.hasFocus = function() { return true; };
         }
+        try { Object.defineProperty(document, 'onvisibilitychange', { get: function() { return null; }, set: function() {} }); } catch (e) {}
+        try { Object.defineProperty(window, 'onpagehide', { get: function() { return null; }, set: function() {} }); } catch (e) {}
+        try { Object.defineProperty(window, 'onblur', { get: function() { return null; }, set: function() {} }); } catch (e) {}
         window.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);
         document.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);
         document.addEventListener('webkitvisibilitychange', function(e) { e.stopImmediatePropagation(); }, true);
+        window.addEventListener('blur', function(e) { e.stopImmediatePropagation(); }, true);
+        window.addEventListener('pagehide', function(e) { e.stopImmediatePropagation(); }, true);
+        window.addEventListener('freeze', function(e) { e.stopImmediatePropagation(); }, true);
       } catch (e) {}
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
