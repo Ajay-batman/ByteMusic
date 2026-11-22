@@ -198,14 +198,19 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setIsLoading(false);
               } else if (event.data === 2) { // PAUSED
                 if (userIntentPlayingRef.current) {
-                  // Involuntary pause caused by Android backgrounding/screen lock: auto-resume!
+                  // Involuntary pause caused by Android backgrounding/screen lock: auto-resume immediately without gap
+                  if (ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
+                    try {
+                      ytPlayerRef.current.playVideo();
+                    } catch {}
+                  }
                   setTimeout(() => {
                     if (userIntentPlayingRef.current && ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
                       try {
                         ytPlayerRef.current.playVideo();
                       } catch {}
                     }
-                  }, 50);
+                  }, 0);
                 } else {
                   setIsPlaying(false);
                 }
@@ -591,19 +596,19 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }}
     >
       {children}
-      {/* Hidden Official YouTube IFrame Player */}
+      {/* Hidden Official YouTube IFrame Player (kept in active viewport to prevent Chromium compositor suspension) */}
       <div
         id="bytemusic-yt-player-container"
         style={{
           position: 'fixed',
-          top: -9999,
-          left: -9999,
-          width: 200,
-          height: 200,
-          opacity: 0.01,
+          bottom: 0,
+          left: 0,
+          width: 1,
+          height: 1,
+          opacity: 0.001,
           pointerEvents: 'none',
           overflow: 'hidden',
-          zIndex: -9999,
+          zIndex: -1,
         }}
       >
         <div id="bytemusic-yt-player" />

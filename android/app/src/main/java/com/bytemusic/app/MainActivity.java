@@ -45,6 +45,17 @@ public class MainActivity extends BridgeActivity {
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
 
+            // Keep Chromium audio pipeline active without background pause glitches
+            webView.getViewTreeObserver().addOnWindowVisibilityChangeListener(visibility -> {
+                if (visibility != View.VISIBLE) {
+                    webView.post(() -> {
+                        webView.onResume();
+                        webView.resumeTimers();
+                        webView.dispatchWindowVisibilityChanged(View.VISIBLE);
+                    });
+                }
+            });
+
             // Native Media Bridge: Syncs web playback state with Android Lock Screen & Notification
             webView.addJavascriptInterface(new Object() {
                 @JavascriptInterface
@@ -83,6 +94,14 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (!hasFocus) {
+            keepWebViewAlive();
+        }
+    }
+
+    @Override
     public void onBackPressed() {
         // Pure music app behavior: minimize to background instead of killing playback
         moveTaskToBack(true);
@@ -91,19 +110,16 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onPause() {
         super.onPause();
-        // Keep WebView media & timers alive in background
-        if (this.bridge != null && this.bridge.getWebView() != null) {
-            WebView webView = this.bridge.getWebView();
-            webView.onResume();
-            webView.resumeTimers();
-            webView.dispatchWindowVisibilityChanged(View.VISIBLE);
-        }
+        keepWebViewAlive();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        // Keep audio thread active during screen off
+        keepWebViewAlive();
+    }
+
+    private void keepWebViewAlive() {
         if (this.bridge != null && this.bridge.getWebView() != null) {
             WebView webView = this.bridge.getWebView();
             webView.onResume();
@@ -117,12 +133,6 @@ public class MainActivity extends BridgeActivity {
         super.onDestroy();
         if (instance == this) {
             instance = null;
-        }
-        try {
-            Intent serviceIntent = new Intent(this, BackgroundAudioService.class);
-            stopService(serviceIntent);
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 }
