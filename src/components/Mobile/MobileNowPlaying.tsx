@@ -6,7 +6,6 @@ import { LiquidGlassSlider } from '../Common/LiquidGlassSlider';
 import { DownloadButton } from '../Common/DownloadButton';
 import { AudioQuality } from '../../types/spotify';
 import { mockTracks } from '../../data/mockSpotifyCatalog';
-import { GlacialRadialArcScrubber } from '../Glacial/GlacialGlassShowcase';
 import { VelvetMetaballFullPlayer } from '../Velvet/VelvetMetaballPlayer';
 import {
   ChevronDown,
@@ -176,163 +175,13 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
   } = usePlayback();
 
   const { isLiked, toggleLike } = useLibrary();
-  const { isLiquidGlass, isVelvetLime, isUltraviolet, isGlacialGlass, isVelvetStyle, currentThemeDef } = useTheme();
+  const { isLiquidGlass, isVelvetLime, isUltraviolet, isVelvetStyle, currentThemeDef } = useTheme();
   const [showQualityMenu, setShowQualityMenu] = useState(false);
 
   if (!currentTrack) return null;
 
   const liked = isLiked(currentTrack.id);
   const albumCoverUrl = currentTrack.album.images[0]?.url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500';
-
-  // Glacial Liquid Glass Layout (Matching Screen 3 "Music" Now Playing with Radial Arc Scrubber)
-  if (isGlacialGlass) {
-    const hateMeTrack = mockTracks.find((t) => t.name.includes('HATE ME')) || mockTracks[0];
-    const pray4LoveTrack = mockTracks.find((t) => t.name.includes('Pray 4 Love') || t.name.includes('Pray for Love')) || mockTracks[1];
-    const vampireTrack = mockTracks.find((t) => t.name.includes('Vampire')) || mockTracks[2];
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/60 md:backdrop-blur-2xl animate-in fade-in duration-200 select-none">
-        {/* Backdrop dismiss for desktop */}
-        <div className="hidden md:block absolute inset-0 cursor-pointer" onClick={onClose} />
-
-        <div className="w-full md:max-w-md h-full md:h-[92vh] md:max-h-[820px] md:rounded-[44px] md:border-[6px] md:border-white/80 shadow-[0_30px_70px_rgba(70,110,160,0.35)] flex flex-col justify-between p-6 relative overflow-hidden text-white z-10 backdrop-blur-3xl">
-          {/* Dual-Tone Background Image with Vertical Specular Reflection Seam */}
-          <div
-            className="absolute inset-0 z-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, rgba(56, 189, 248, 0.4) 0%, rgba(255, 255, 255, 0.05) 48%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.05) 52%, rgba(251, 146, 60, 0.45) 100%),
-                linear-gradient(to bottom, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0.65) 100%),
-                url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1000&h=1200&fit=crop')
-              `,
-            }}
-          />
-
-          {/* Vertical Luminous Glass Reflection Seam */}
-          <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1.5px] vertical-glass-seam pointer-events-none z-10" />
-
-          {/* Header Bar */}
-          <div className="flex items-center justify-between pt-1 z-20">
-            <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-full glacial-circle-btn flex items-center justify-center text-white/90 active:scale-95 transition-transform"
-              title="Close"
-            >
-              <ChevronLeft size={22} />
-            </button>
-
-            <h2 className="text-lg font-bold text-white tracking-wide drop-shadow-sm">
-              Music
-            </h2>
-
-            <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-full glacial-circle-btn flex items-center justify-center text-white/90 active:scale-95 transition-transform"
-              title="Minimize"
-            >
-              <ChevronDown size={20} />
-            </button>
-          </div>
-
-          {/* Curved Track Carousel */}
-          <div className="w-full flex items-center justify-center py-4 z-20">
-            <div className="flex items-center justify-center gap-3 text-center">
-              <button
-                onClick={() => playTrack(hateMeTrack, [hateMeTrack, pray4LoveTrack, vampireTrack])}
-                className="flex flex-col items-center opacity-60 hover:opacity-100 transition-all transform -rotate-6 hover:scale-105"
-              >
-                <span className="text-xs font-semibold text-white/80">01 HATE ME</span>
-                <span className="text-[10px] text-white/60">Ellie Goulding</span>
-              </button>
-
-              <div className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/30 shadow-lg transform scale-110">
-                <span className="text-sm font-extrabold text-white tracking-tight drop-shadow">
-                  {currentTrack.name}
-                </span>
-                <span className="text-xs text-sky-200 font-medium">
-                  {currentTrack.artists[0]?.name}
-                </span>
-              </div>
-
-              <button
-                onClick={() => playTrack(vampireTrack, [hateMeTrack, pray4LoveTrack, vampireTrack])}
-                className="flex flex-col items-center opacity-60 hover:opacity-100 transition-all transform rotate-6 hover:scale-105"
-              >
-                <span className="text-xs font-semibold text-white/80">03 Vampire</span>
-                <span className="text-[10px] text-white/60">Olivia Rodrigo</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Radial Arc Progress Dial */}
-          <div className="w-full flex-1 flex flex-col justify-end items-center px-4 pb-2 z-20">
-            <GlacialRadialArcScrubber />
-          </div>
-
-          {/* Master Sculptured Liquid Glass Controller Deck */}
-          <div className="w-full flex flex-col gap-3 pb-3 px-2 z-20">
-            {/* Secondary Controls: Shuffle & Repeat */}
-            <div className="flex items-center justify-between px-6">
-              <button
-                onClick={toggleShuffle}
-                className={`w-11 h-11 rounded-full glacial-circle-btn flex items-center justify-center shadow-md ${
-                  isShuffle ? 'text-sky-300 ring-2 ring-sky-300/50' : 'text-white/80'
-                }`}
-                title="Toggle Shuffle"
-              >
-                <Shuffle size={18} />
-              </button>
-
-              <button
-                onClick={toggleRepeat}
-                className={`w-11 h-11 rounded-full glacial-circle-btn flex items-center justify-center shadow-md ${
-                  repeatMode !== 'off' ? 'text-sky-300 ring-2 ring-sky-300/50' : 'text-white/80'
-                }`}
-                title="Toggle Repeat"
-              >
-                {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
-              </button>
-            </div>
-
-            {/* Organic Sculptured Dock Container */}
-            <div className="w-full p-2.5 rounded-[36px] glacial-sculpted-dock flex items-center justify-between px-6 shadow-2xl border border-white/60 backdrop-blur-3xl">
-              <button
-                onClick={prevTrack}
-                className="w-12 h-12 rounded-full glacial-circle-btn flex items-center justify-center text-white/90 shadow-md active:scale-95"
-                title="Previous Track"
-              >
-                <SkipBack size={22} fill="rgba(255, 255, 255, 0.4)" />
-              </button>
-
-              <div className="chromatic-halo">
-                <button
-                  onClick={togglePlay}
-                  className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-slate-900 shadow-[0_8px_25px_rgba(0,0,0,0.35)] active:scale-90 transition-transform"
-                  title={isPlaying ? 'Pause' : 'Play'}
-                >
-                  {isLoading ? (
-                    <Loader2 size={24} className="animate-spin text-slate-900" />
-                  ) : isPlaying ? (
-                    <Pause size={26} fill="#0f172a" className="text-slate-900" />
-                  ) : (
-                    <Play size={26} fill="#0f172a" className="text-slate-900 ml-1" />
-                  )}
-                </button>
-              </div>
-
-              <button
-                onClick={nextTrack}
-                className="w-12 h-12 rounded-full glacial-circle-btn flex items-center justify-center text-white/90 shadow-md active:scale-95"
-                title="Next Track"
-              >
-                <SkipForward size={22} fill="rgba(255, 255, 255, 0.4)" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Cosmic Ultraviolet Layout (Matching Screen 1 "Now Playing" from Reference Image)
   if (isUltraviolet) {

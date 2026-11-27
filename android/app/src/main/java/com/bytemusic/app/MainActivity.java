@@ -10,6 +10,9 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import com.getcapacitor.BridgeActivity;
@@ -84,6 +87,23 @@ public class MainActivity extends BridgeActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+            // Bridge native Android system bar & cutout insets (gesture/3-button bar height) to CSS
+            View rootView = getWindow().getDecorView();
+            ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, windowInsets) -> {
+                Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
+                );
+                float density = getResources().getDisplayMetrics().density;
+                int topPx = Math.round(bars.top / Math.max(1f, density));
+                int bottomPx = Math.round(bars.bottom / Math.max(1f, density));
+                String jsInsets =
+                    "try{document.documentElement.style.setProperty('--app-safe-top','" + topPx + "px');" +
+                    "document.documentElement.style.setProperty('--app-safe-bottom','" + bottomPx + "px');}catch(e){}";
+                webView.post(() -> webView.evaluateJavascript(jsInsets, null));
+                return ViewCompat.onApplyWindowInsets(v, windowInsets);
+            });
+            ViewCompat.requestApplyInsets(rootView);
 
             // Native Media Bridge: Syncs web playback state with Android Lock Screen & Notification
             webView.addJavascriptInterface(new Object() {

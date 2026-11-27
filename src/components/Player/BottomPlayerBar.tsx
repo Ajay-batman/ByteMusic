@@ -37,10 +37,10 @@ function formatDuration(ms: number): string {
  */
 const PlayerProgressBar: React.FC<{ seek: (ms: number) => void }> = React.memo(({ seek }) => {
   const { progressMs, durationMs } = usePlaybackProgress();
-  const { isVelvetLime, isUltraviolet, isGlacialGlass } = useTheme();
+  const { isVelvetLime, isUltraviolet } = useTheme();
 
   return (
-    <div className={`w-full flex items-center gap-3 text-xs font-mono ${isGlacialGlass ? 'text-slate-600' : 'text-[#b3b3b3]'}`}>
+    <div className="w-full flex items-center gap-3 text-xs font-mono text-[#b3b3b3]">
       <span className="w-9 text-right">{formatDuration(progressMs)}</span>
       <div className="flex-1">
         <LiquidGlassSlider
@@ -49,7 +49,7 @@ const PlayerProgressBar: React.FC<{ seek: (ms: number) => void }> = React.memo((
           max={durationMs || 1}
           onChange={(newMs) => seek(newMs)}
           formatTooltip={(ms) => formatDuration(ms)}
-          accentColor={isUltraviolet ? '#d946ef' : isVelvetLime ? '#D2F843' : isGlacialGlass ? '#38bdf8' : undefined}
+          accentColor={isUltraviolet ? '#d946ef' : isVelvetLime ? '#D2F843' : undefined}
         />
       </div>
       <span className="w-9">{formatDuration(durationMs)}</span>
@@ -83,7 +83,7 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
   } = usePlayback();
 
   const { isLiked, toggleLike } = useLibrary();
-  const { isLiquidGlass, isVelvetLime, isUltraviolet, isGlacialGlass, isVelvetStyle } = useTheme();
+  const { isLiquidGlass, isVelvetLime, isUltraviolet, isVelvetStyle } = useTheme();
 
   const [showQualityMenu, setShowQualityMenu] = useState(false);
 
@@ -102,9 +102,7 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
   return (
     <footer
       className={`transition-all duration-300 z-50 select-none ${
-        isGlacialGlass
-          ? 'mx-4 mb-3 rounded-[32px] glacial-sculpted-dock h-20 px-6 grid grid-cols-[1fr_2fr_1fr] items-center shadow-2xl border border-white/80 text-slate-800'
-          : isVelvetLime
+        isVelvetLime
           ? 'mx-4 mb-3 rounded-2xl frosted-3d-dock h-20 px-5 grid grid-cols-[1fr_2fr_1fr] items-center shadow-2xl'
           : isUltraviolet
           ? 'mx-4 mb-3 rounded-2xl glass-player h-20 px-5 grid grid-cols-[1fr_2fr_1fr] items-center shadow-2xl'
@@ -126,9 +124,7 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
             onClick={onOpenNowPlaying}
             title="Expand Now Playing"
             className={`w-14 h-14 object-cover shadow flex-shrink-0 cursor-pointer ${
-              isGlacialGlass
-                ? 'rounded-2xl border border-white/70 shadow-md bg-white/20'
-                : isUltraviolet
+              isUltraviolet
                 ? 'rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_15px_rgba(217,70,239,0.45)] hover:scale-105 transition-all bg-[#282828]'
                 : isVelvetLime
                 ? 'rounded-full border border-white/20 bg-[#282828]'
@@ -141,10 +137,10 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
           onClick={onOpenNowPlaying}
           title="Expand Now Playing"
         >
-          <span className={`text-sm font-bold truncate font-sans ${isGlacialGlass ? 'text-slate-900 hover:text-sky-600' : 'text-white hover:underline'}`}>
+          <span className="text-sm font-bold truncate font-sans text-white hover:underline">
             {currentTrack.name}
           </span>
-          <span className={`text-xs truncate ${isGlacialGlass ? 'text-slate-500' : 'text-[#b3b3b3] hover:underline hover:text-white'}`}>
+          <span className="text-xs truncate text-[#b3b3b3] hover:underline hover:text-white">
             {currentTrack.artists.map((a) => a.name).join(', ')}
           </span>
         </div>
@@ -157,9 +153,7 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
             <Heart
               size={18}
               className={
-                isGlacialGlass
-                  ? 'text-[#f43f5e] fill-[#f43f5e]'
-                  : isUltraviolet
+                isUltraviolet
                   ? 'text-[#d946ef] fill-[#d946ef]'
                   : isVelvetLime
                   ? 'text-[#D2F843] fill-[#D2F843]'
@@ -167,7 +161,7 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
               }
             />
           ) : (
-            <Heart size={18} className={isGlacialGlass ? 'text-slate-400 hover:text-slate-600' : 'text-[#b3b3b3] hover:text-white'} />
+            <Heart size={18} className="text-[#b3b3b3] hover:text-white" />
           )}
         </button>
         <DownloadButton track={currentTrack} size={18} className="ml-1" />
@@ -181,15 +175,11 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
             onClick={toggleShuffle}
             className={`transition-colors ${
               isShuffle
-                ? isGlacialGlass
-                  ? 'text-sky-600'
-                  : isUltraviolet
+                ? isUltraviolet
                   ? 'text-[#d946ef]'
                   : isVelvetLime
                   ? 'text-[#D2F843]'
                   : 'text-[#1db954]'
-                : isGlacialGlass
-                ? 'text-slate-500 hover:text-slate-900'
                 : 'text-[#b3b3b3] hover:text-white'
             }`}
           >
@@ -197,54 +187,35 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
           </button>
           <button
             onClick={prevTrack}
-            className={`${isGlacialGlass ? 'text-slate-600 hover:text-slate-900' : 'text-[#b3b3b3] hover:text-white'} transition-colors`}
+            className="text-[#b3b3b3] hover:text-white transition-colors"
           >
             <SkipBack size={20} fill="currentColor" />
           </button>
 
           {/* Center Play/Pause button */}
-          {isGlacialGlass ? (
-            <div className="chromatic-halo">
-              <button
-                onClick={togglePlay}
-                disabled={isLoading}
-                className="w-11 h-11 rounded-full bg-white text-slate-900 hover:scale-105 active:scale-90 transition-all flex items-center justify-center shadow-lg"
-                title={isPlaying ? 'Pause' : 'Play'}
-              >
-                {isLoading ? (
-                  <Loader2 size={18} className="animate-spin text-slate-900" />
-                ) : isPlaying ? (
-                  <Pause size={18} fill="#0f172a" className="text-slate-900" />
-                ) : (
-                  <Play size={18} fill="#0f172a" className="text-slate-900 ml-0.5" />
-                )}
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={togglePlay}
-              disabled={isLoading}
-              className={`w-10 h-10 rounded-full hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow disabled:opacity-75 ${
-                isUltraviolet
-                  ? 'light-glass-disc text-white shadow-[0_0_20px_rgba(217,70,239,0.35)]'
-                  : isVelvetLime
-                  ? 'bg-[#D2F843] text-black shadow-[0_0_18px_rgba(210,248,67,0.4)]'
-                  : 'bg-white text-black'
-              }`}
-            >
-              {isLoading ? (
-                <Loader2 size={16} className={`animate-spin ${isUltraviolet ? 'text-white' : 'text-black'}`} />
-              ) : isPlaying ? (
-                <Pause size={18} fill="currentColor" />
-              ) : (
-                <Play size={18} fill="currentColor" className="ml-0.5" />
-              )}
-            </button>
-          )}
+          <button
+            onClick={togglePlay}
+            disabled={isLoading}
+            className={`w-10 h-10 rounded-full hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow disabled:opacity-75 ${
+              isUltraviolet
+                ? 'light-glass-disc text-white shadow-[0_0_20px_rgba(217,70,239,0.35)]'
+                : isVelvetLime
+                ? 'bg-[#D2F843] text-black shadow-[0_0_18px_rgba(210,248,67,0.4)]'
+                : 'bg-white text-black'
+            }`}
+          >
+            {isLoading ? (
+              <Loader2 size={16} className={`animate-spin ${isUltraviolet ? 'text-white' : 'text-black'}`} />
+            ) : isPlaying ? (
+              <Pause size={18} fill="currentColor" />
+            ) : (
+              <Play size={18} fill="currentColor" className="ml-0.5" />
+            )}
+          </button>
 
           <button
             onClick={nextTrack}
-            className={`${isGlacialGlass ? 'text-slate-600 hover:text-slate-900' : 'text-[#b3b3b3] hover:text-white'} transition-colors`}
+            className="text-[#b3b3b3] hover:text-white transition-colors"
           >
             <SkipForward size={20} fill="currentColor" />
           </button>
@@ -252,15 +223,11 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({ onOpenNowPlayi
             onClick={toggleRepeat}
             className={`transition-colors ${
               repeatMode !== 'off'
-                ? isGlacialGlass
-                  ? 'text-sky-600'
-                  : isUltraviolet
+                ? isUltraviolet
                   ? 'text-[#d946ef]'
                   : isVelvetLime
                   ? 'text-[#D2F843]'
                   : 'text-[#1db954]'
-                : isGlacialGlass
-                ? 'text-slate-500 hover:text-slate-900'
                 : 'text-[#b3b3b3] hover:text-white'
             }`}
           >

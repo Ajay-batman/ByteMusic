@@ -70,22 +70,24 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
   const [isFusedUI, setIsFusedUI] = useState(false);
   const [autoSeparateProgress, setAutoSeparateProgress] = useState(0);
 
-  // Responsive geometry constants (fits both narrow mobile phones and desktop cleanly)
-  const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < 520 : false
+  // Responsive geometry constants (fits compact micro phones, Galaxy A56 ~384-412px, and desktop cleanly)
+  const [viewportW, setViewportW] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024
   );
   useEffect(() => {
-    const onResize = () => setIsNarrow(window.innerWidth < 520);
+    const onResize = () => setViewportW(window.innerWidth);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const BASE_PILL_W = isNarrow ? 204 : 248;
-  const EXPANDED_PILL_W = isNarrow ? 290 : 354;
-  const PILL_H = isNarrow ? 56 : 66;
-  const DROPLET_SIZE = isNarrow ? 54 : 66;
-  const REST_OFFSET_X = isNarrow ? 158 : 186;
-  const STAGE_SHIFT_SEPARATED = isNarrow ? -39 : -42;
+  const isCompactPhone = viewportW < 365;
+  const isNarrow = viewportW < 520;
+  const BASE_PILL_W = isCompactPhone ? 204 : isNarrow ? 244 : 254;
+  const EXPANDED_PILL_W = isCompactPhone ? 286 : isNarrow ? 316 : 354;
+  const PILL_H = isNarrow ? 60 : 66;
+  const DROPLET_SIZE = isNarrow ? 56 : 66;
+  const REST_OFFSET_X = isCompactPhone ? 156 : isNarrow ? 162 : 190;
+  const STAGE_SHIFT_SEPARATED = isCompactPhone ? -36 : isNarrow ? -34 : -42;
 
   // Real volume 0..100
   const volumePct = isMuted ? 0 : Math.round(volume * 100);
@@ -105,7 +107,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
   const satelliteBadgeRef = useRef<HTMLDivElement>(null);
   const volumePanelRef = useRef<HTMLDivElement>(null);
   const miniInfoRef = useRef<HTMLDivElement>(null);
-  const causticRef = useRef<SVGFETurbulenceElement>(null);
+  const wakePhysicsRef = useRef<(() => void) | null>(null);
 
   const viscosity = 13;
   const stiffness = 0.15;
@@ -174,6 +176,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
       s.sX = REST_OFFSET_X;
       s.currentPillW = BASE_PILL_W;
       s.stageShiftX = STAGE_SHIFT_SEPARATED;
+      wakePhysicsRef.current?.();
     }
   }, [BASE_PILL_W, EXPANDED_PILL_W, PILL_H, DROPLET_SIZE, REST_OFFSET_X, STAGE_SHIFT_SEPARATED]);
 
@@ -182,6 +185,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
     s.sTargetX = (s.expandedPillW - s.dropletSize) / 2 - 6;
     s.sTargetY = 0;
     s.lastVolumeInteractionTime = performance.now();
+    wakePhysicsRef.current?.();
   };
 
   const triggerSeparate = () => {
@@ -190,14 +194,21 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
     s.sTargetX = s.restOffsetX;
     s.sTargetY = 0;
     setAutoSeparateProgress(0);
+    wakePhysicsRef.current?.();
   };
 
-  // Main 60fps Liquid Glass Physics & Auto-Separation Loop
+  // Main 60fps Liquid Glass Physics & Auto-Separation Loop (sleeps at rest)
   useEffect(() => {
-    let rafId: number;
+    let rafId = 0;
     let lastCountdownBroadcast = 0;
 
+    const schedule = () => {
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    };
+    wakePhysicsRef.current = schedule;
+
     const tick = (now: number) => {
+      rafId = 0;
       const s = phys.current;
       const k = stiffness;
       const damping = 0.77;
@@ -401,18 +412,29 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
         satelliteContentRef.current.style.transform = sContentTransform;
       }
 
-      s.causticPhase += 0.014;
-      if (causticRef.current) {
-        const fx = (0.014 + Math.sin(s.causticPhase) * 0.002).toFixed(5);
-        const fy = (0.028 + Math.cos(s.causticPhase * 0.8) * 0.0025).toFixed(5);
-        causticRef.current.setAttribute('baseFrequency', `${fx} ${fy}`);
+      const settled =
+        !s.isDraggingDroplet &&
+        !s.isAdjustingVolume &&
+        !s.wasFused &&
+        Math.abs(s.sTargetX - s.sX) < 0.08 &&
+        Math.abs(s.sTargetY - s.sY) < 0.08 &&
+        Math.abs(s.sVx) < 0.02 &&
+        Math.abs(s.sVy) < 0.02 &&
+        Math.abs(s.pX) < 0.08 &&
+        Math.abs(s.pVx) < 0.02 &&
+        Math.abs(s.currentPillW - s.basePillW) < 0.1 &&
+        Math.abs(s.sScaleX - 1) < 0.002 &&
+        Math.abs(s.pScaleX - 1) < 0.002;
+      if (!settled) {
+        rafId = requestAnimationFrame(tick);
       }
-
-      rafId = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    wakePhysicsRef.current();
+    return () => {
+      wakePhysicsRef.current = null;
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   if (!currentTrack) return null;
@@ -428,6 +450,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
     s.dragOffsetX = e.clientX - s.sX;
     s.dragOffsetY = e.clientY - s.sY;
     s.lastVolumeInteractionTime = performance.now();
+    wakePhysicsRef.current?.();
   };
 
   const handleDropletPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -487,12 +510,14 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
     nextTrack();
     phys.current.pScaleVx += 0.08;
     phys.current.pScaleVy -= 0.06;
+    wakePhysicsRef.current?.();
   };
 
   const handleTogglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     togglePlay();
     phys.current.pScaleVy -= 0.12;
+    wakePhysicsRef.current?.();
   };
 
   const renderVolumeIcon = (iconClass = 'w-4 h-4') => {
@@ -510,7 +535,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
       style={{ height: PILL_H }}
       className={`relative w-full flex items-center justify-center select-none pointer-events-none ${className}`}
     >
-      {/* SVG Gooey Metaball & Liquid Caustic Filters */}
+      {/* SVG Gooey Metaball Filter */}
       <svg className="sr-only" width="0" height="0" aria-hidden="true">
         <defs>
           <filter id={`liquid-fusion-mini-${filterId}`} x="-40%" y="-40%" width="180%" height="180%">
@@ -522,24 +547,6 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
               result="goo"
             />
             <feComposite in="goo" in2="goo" operator="in" />
-          </filter>
-
-          <filter id={`liquid-caustic-mini-${filterId}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence
-              ref={causticRef}
-              type="fractalNoise"
-              baseFrequency="0.014 0.028"
-              numOctaves={2}
-              seed={11}
-              result="noise"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="noise"
-              scale={10}
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
           </filter>
         </defs>
       </svg>
@@ -591,8 +598,8 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
             style={{
               width: BASE_PILL_W,
               height: PILL_H,
-              backdropFilter: 'blur(16px) saturate(185%)',
-              WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+              backdropFilter: 'blur(12px) saturate(145%)',
+              WebkitBackdropFilter: 'blur(12px) saturate(145%)',
               boxShadow: isFrost
                 ? 'inset 0 1.5px 2px rgba(255,255,255,0.95), inset 0 -1.5px 2px rgba(15,23,42,0.08), 0 20px 45px -10px rgba(15,23,42,0.18)'
                 : `inset 0 1.5px 1.5px rgba(255,255,255,${specular}), inset 0 -1.5px 2px rgba(255,255,255,${
@@ -602,12 +609,11 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
             className={`absolute rounded-full overflow-hidden border transition-colors duration-500 ${
               isFrost
                 ? 'border-slate-300/80 bg-white/80'
-                : 'border-white/30 bg-white/[0.05]'
+                : 'border-white/30 bg-white/[0.06]'
             }`}
           >
             <div
-              style={{ filter: `url(#liquid-caustic-mini-${filterId})` }}
-              className={`w-full h-full opacity-50 ${
+              className={`w-full h-full opacity-45 ${
                 isFrost
                   ? 'bg-gradient-to-tr from-sky-300/25 via-transparent to-indigo-300/25'
                   : 'bg-gradient-to-tr from-cyan-400/20 via-transparent to-fuchsia-400/20'
@@ -621,8 +627,8 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
             style={{
               width: DROPLET_SIZE,
               height: DROPLET_SIZE,
-              backdropFilter: 'blur(16px) saturate(185%)',
-              WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+              backdropFilter: 'blur(12px) saturate(145%)',
+              WebkitBackdropFilter: 'blur(12px) saturate(145%)',
               boxShadow: isFrost
                 ? 'inset 0 1.5px 2px rgba(255,255,255,0.95), inset 0 -1.5px 2px rgba(15,23,42,0.08), 0 18px 40px -10px rgba(15,23,42,0.18)'
                 : `inset 0 1.5px 1.5px rgba(255,255,255,${specular}), inset 0 -1.5px 2px rgba(255,255,255,${
@@ -632,12 +638,11 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
             className={`absolute rounded-full overflow-hidden border transition-colors duration-500 ${
               isFrost
                 ? 'border-slate-300/80 bg-white/85'
-                : 'border-white/35 bg-white/[0.06]'
+                : 'border-white/35 bg-white/[0.08]'
             }`}
           >
             <div
-              style={{ filter: `url(#liquid-caustic-mini-${filterId})` }}
-              className={`w-full h-full opacity-55 ${
+              className={`w-full h-full opacity-50 ${
                 volumePct === 0
                   ? 'bg-gradient-to-tr from-rose-400/30 to-amber-300/20'
                   : isFrost
@@ -715,7 +720,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
                   }`}>
                     <span
                       className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
-                        isPlaying ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'
+                        isPlaying ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]' : 'bg-slate-400'
                       }`}
                     />
                     <span className="truncate">

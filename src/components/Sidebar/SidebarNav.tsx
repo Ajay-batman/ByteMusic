@@ -22,7 +22,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     isLiquidGlass,
     isVelvetLime,
     isUltraviolet,
-    isGlacialGlass,
     isFrost,
     isAurora,
     isSunset,
@@ -48,9 +47,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       <div
         className={`flex flex-col gap-3 transition-all duration-300 ${
           isFrost
-            ? 'bg-white/75 backdrop-blur-xl rounded-2xl p-4 text-slate-800 border border-white/90 shadow-xl'
-            : isGlacialGlass
-            ? 'glacial-sculpted-dock rounded-2xl p-4 text-slate-800 border border-white/80'
+            ? 'bg-white/75 backdrop-blur-md rounded-2xl p-4 text-slate-800 border border-white/90 shadow-xl'
             : isVelvetStyle
             ? 'frosted-3d-dock rounded-2xl p-4'
             : isUltraviolet
@@ -75,8 +72,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             currentView === 'home'
               ? isFrost
                 ? 'bg-slate-900 text-white shadow-sm'
-                : isGlacialGlass
-                ? 'bg-white/80 text-slate-900 shadow-sm border border-white/90'
                 : isAurora
                 ? 'bg-emerald-400 text-slate-950 font-black shadow-lg shadow-emerald-400/25'
                 : isSunset
@@ -88,12 +83,10 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                 : 'text-white'
               : isFrost
               ? 'text-slate-600 hover:text-slate-950 hover:bg-black/5'
-              : isGlacialGlass
-              ? 'text-slate-600 hover:text-slate-900'
               : 'text-[#b3b3b3] hover:text-white'
           }`}
         >
-          <Home size={21} strokeWidth={currentView === 'home' && (isVelvetStyle || isUltraviolet || isGlacialGlass) ? 2.5 : 2} />
+          <Home size={21} strokeWidth={currentView === 'home' && (isVelvetStyle || isUltraviolet) ? 2.5 : 2} />
           <span>Home</span>
         </button>
         <button
@@ -102,8 +95,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             currentView === 'search'
               ? isFrost
                 ? 'bg-slate-900 text-white shadow-sm'
-                : isGlacialGlass
-                ? 'bg-white/80 text-slate-900 shadow-sm border border-white/90'
                 : isAurora
                 ? 'bg-emerald-400 text-slate-950 font-black shadow-lg shadow-emerald-400/25'
                 : isSunset
@@ -115,12 +106,10 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                 : 'text-white'
               : isFrost
               ? 'text-slate-600 hover:text-slate-950 hover:bg-black/5'
-              : isGlacialGlass
-              ? 'text-slate-600 hover:text-slate-900'
               : 'text-[#b3b3b3] hover:text-white'
           }`}
         >
-          <Search size={21} strokeWidth={currentView === 'search' && (isVelvetStyle || isUltraviolet || isGlacialGlass) ? 2.5 : 2} />
+          <Search size={21} strokeWidth={currentView === 'search' && (isVelvetStyle || isUltraviolet) ? 2.5 : 2} />
           <span>Search</span>
         </button>
 
@@ -131,8 +120,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           className={`mt-1 p-2 rounded-xl flex items-center justify-between w-full transition-all text-xs font-semibold ${
             isFrost
               ? 'bg-white/80 border border-slate-900/10 text-slate-900 shadow-sm hover:bg-white'
-              : isGlacialGlass
-              ? 'bg-white/60 border border-white/80 text-slate-900 shadow-sm'
               : isUltraviolet || isVelvetStyle
               ? 'bg-white/5 border border-white/10 hover:bg-white/10 text-white'
               : isLiquidGlass
@@ -142,10 +129,10 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         >
           <div className="flex items-center gap-2">
             <Palette size={14} style={{ color: currentThemeDef.accentColor }} />
-            <span className={`${isGlacialGlass || isFrost ? 'text-slate-900' : 'text-white'} font-medium`}>{currentThemeDef.name}</span>
+            <span className={`${isFrost ? 'text-slate-900' : 'text-white'} font-medium`}>{currentThemeDef.name}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] ${isGlacialGlass || isFrost ? 'text-slate-500' : 'text-[#b3b3b3]'} uppercase tracking-wider font-bold`}>Themes</span>
+            <span className={`text-[10px] ${isFrost ? 'text-slate-500' : 'text-[#b3b3b3]'} uppercase tracking-wider font-bold`}>Themes</span>
             <div className="flex items-center -space-x-1">
               {currentThemeDef.previewColors.map((c, i) => (
                 <span
@@ -163,9 +150,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       <div
         className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
           isFrost
-            ? 'bg-white/75 backdrop-blur-xl rounded-2xl p-3.5 border border-white/90 shadow-xl text-slate-800'
-            : isGlacialGlass
-            ? 'glacial-sculpted-dock rounded-2xl p-3.5 border border-white/80 text-slate-800'
+            ? 'bg-white/75 backdrop-blur-md rounded-2xl p-3.5 border border-white/90 shadow-xl text-slate-800'
             : isVelvetStyle
             ? 'frosted-3d-dock rounded-2xl p-3.5'
             : isUltraviolet

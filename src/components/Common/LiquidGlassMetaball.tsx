@@ -61,8 +61,8 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
   // Responsive metrics derived from viewport width so the bar scales smoothly across all devices
   const [metrics, setMetrics] = useState(() => {
     const w = typeof window !== 'undefined' ? window.innerWidth : 1024;
-    if (w < 360) return { itemSize: 48, itemGap: 8, padding: 6 };
-    if (w < 768) return { itemSize: 52, itemGap: 10, padding: 8 };
+    if (w < 360) return { itemSize: 48, itemGap: 6, padding: 6 };
+    if (w < 768) return { itemSize: 56, itemGap: 8, padding: 8 };
     return { itemSize: 56, itemGap: 14, padding: 8 };
   });
 
@@ -70,9 +70,9 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
     const updateMetrics = () => {
       const w = window.innerWidth;
       if (w < 360) {
-        setMetrics({ itemSize: 48, itemGap: 8, padding: 6 });
+        setMetrics({ itemSize: 48, itemGap: 6, padding: 6 });
       } else if (w < 768) {
-        setMetrics({ itemSize: 52, itemGap: 10, padding: 8 });
+        setMetrics({ itemSize: 56, itemGap: 8, padding: 8 });
       } else {
         setMetrics({ itemSize: 56, itemGap: 14, padding: 8 });
       }
@@ -103,7 +103,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
   const slotGlassRefs = useRef<(HTMLDivElement | null)[]>([]);
   const blurRef = useRef<SVGFEGaussianBlurElement>(null);
   const matrixRef = useRef<SVGFEColorMatrixElement>(null);
-  const causticRef = useRef<SVGFETurbulenceElement>(null);
+  const wakePhysicsRef = useRef<(() => void) | null>(null);
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -145,7 +145,6 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
     pointerDownX: 0,
     dragStartX: 0,
     suppressNextClick: false,
-    causticPhase: 0,
     viscosity,
     stiffness,
     interactionMode,
@@ -228,14 +227,21 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
       s.pVx += direction * 1.5;
       s.pScaleVx += 0.02;
       s.pScaleVy -= 0.014;
+      wakePhysicsRef.current?.();
     }
   }, [activeIndex]);
 
-  // 60fps Liquid Glass Two-Component Metaball Fusion Physics Loop
+  // 60fps Liquid Glass Two-Component Metaball Fusion Physics Loop (sleeps at rest)
   useEffect(() => {
-    let rafId: number;
+    let rafId = 0;
+
+    const schedule = () => {
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    };
+    wakePhysicsRef.current = schedule;
 
     const tick = () => {
+      rafId = 0;
       const s = phys.current;
       const k = s.stiffness;
       const damping = 0.76;
@@ -341,19 +347,24 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
       if (dropletGooRef.current) dropletGooRef.current.style.transform = dropletTransform;
       if (dropletGlassRef.current) dropletGlassRef.current.style.transform = dropletTransform;
 
-      // Subtle living liquid shimmer in internal caustics
-      s.causticPhase += 0.014;
-      if (causticRef.current) {
-        const fx = (0.014 + Math.sin(s.causticPhase) * 0.002).toFixed(5);
-        const fy = (0.028 + Math.cos(s.causticPhase * 0.8) * 0.0025).toFixed(5);
-        causticRef.current.setAttribute('baseFrequency', `${fx} ${fy}`);
+      const settled =
+        !s.isDragging &&
+        dist < 0.08 &&
+        Math.abs(s.sVx) < 0.02 &&
+        Math.abs(s.pVx) < 0.02 &&
+        Math.abs(s.pX) < 0.05 &&
+        Math.abs(s.sScaleX - 1) < 0.002 &&
+        Math.abs(s.sScaleVx) < 0.002;
+      if (!settled) {
+        rafId = requestAnimationFrame(tick);
       }
-
-      rafId = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    wakePhysicsRef.current();
+    return () => {
+      wakePhysicsRef.current = null;
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   // Move & fuse placeholder droplet into clicked/selected icon (and vibrate with water physics)
@@ -391,6 +402,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
       }
     } catch {}
 
+    wakePhysicsRef.current?.();
     itemsRef.current[index]?.onSelect();
   };
 
@@ -402,6 +414,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
     phys.current.pointerId = e.pointerId;
     phys.current.pointerDownX = e.clientX;
     phys.current.dragStartX = e.clientX - phys.current.sX;
+    wakePhysicsRef.current?.();
   };
 
   const handleNavPointerMove = (e: React.PointerEvent<HTMLElement>) => {
@@ -473,7 +486,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
       style={{ width: TRACK_WIDTH, height: TRACK_HEIGHT }}
       className={`relative flex items-center justify-center touch-none select-none pointer-events-auto ${className}`}
     >
-      {/* SVG Gooey Metaball & Liquid Caustic Filters */}
+      {/* SVG Gooey Metaball Filter */}
       <svg className="sr-only" width="0" height="0" aria-hidden="true">
         <defs>
           <filter id={`liquid-fusion-${filterId}`} x="-40%" y="-40%" width="180%" height="180%">
@@ -491,24 +504,6 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
               result="goo"
             />
             <feComposite in="goo" in2="goo" operator="in" />
-          </filter>
-
-          <filter id={`liquid-caustic-${filterId}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence
-              ref={causticRef}
-              type="fractalNoise"
-              baseFrequency="0.014 0.028"
-              numOctaves={2}
-              seed={11}
-              result="noise"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="noise"
-              scale={10}
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
           </filter>
         </defs>
       </svg>
@@ -557,8 +552,8 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
           style={{
             width: TRACK_WIDTH,
             height: TRACK_HEIGHT,
-            backdropFilter: 'blur(16px) saturate(185%)',
-            WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+            backdropFilter: 'blur(12px) saturate(145%)',
+            WebkitBackdropFilter: 'blur(12px) saturate(145%)',
             boxShadow: useDarkInk
               ? `inset 0 1.5px 1px rgba(255,255,255,${Math.min(1, specular + 0.15)}), inset 0 -1.5px 2px rgba(15,23,42,0.14), 0 20px 44px -10px rgba(15,23,42,0.22)`
               : `inset 0 1.5px 1.5px rgba(255,255,255,${specular}), inset 0 -1.5px 2px rgba(255,255,255,${
@@ -574,7 +569,6 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
           }`}
         >
           <div
-            style={{ filter: `url(#liquid-caustic-${filterId})` }}
             className={`w-full h-full opacity-50 ${
               isLight
                 ? 'bg-gradient-to-tr from-sky-300/25 via-transparent to-indigo-300/25'
@@ -607,8 +601,8 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
           style={{
             width: ITEM_SIZE,
             height: ITEM_SIZE,
-            backdropFilter: 'blur(16px) saturate(185%)',
-            WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+            backdropFilter: 'blur(12px) saturate(145%)',
+            WebkitBackdropFilter: 'blur(12px) saturate(145%)',
             boxShadow: useDarkInk
               ? `inset 0 1.5px 1px rgba(255,255,255,${Math.min(1, specular + 0.2)}), inset 0 -1.5px 2px rgba(15,23,42,0.16), 0 10px 24px -6px rgba(15,23,42,0.25)`
               : `inset 0 1.5px 1.5px rgba(255,255,255,${Math.min(
@@ -627,7 +621,6 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
           }`}
         >
           <div
-            style={{ filter: `url(#liquid-caustic-${filterId})` }}
             className="w-full h-full opacity-60 bg-gradient-to-tr from-emerald-300/25 via-transparent to-cyan-200/30"
           />
         </div>
@@ -667,7 +660,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
                   : 'text-white/65 hover:text-white'
               }`}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="w-[22px] h-[22px]" />
             </button>
           );
         })}

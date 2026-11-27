@@ -35,7 +35,7 @@ const AppContent: React.FC = () => {
   const [playlistOrigin, setPlaylistOrigin] = useState<'home' | 'search' | 'library'>('library');
   const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
   const { allPlaylists, getPlaylistById } = useLibrary();
-  const { theme, isLiquidGlass, isVelvetLime, isUltraviolet, isGlacialGlass, isVelvetStyle } = useTheme();
+  const { theme, isLiquidGlass, isUltraviolet, isVelvetStyle } = useTheme();
 
   const selectedPlaylist =
     getPlaylistById(selectedPlaylistId) ||
@@ -64,12 +64,8 @@ const AppContent: React.FC = () => {
       ? 'velvet-lime-bg text-white'
       : theme === 'cosmic-ultraviolet'
       ? 'cosmic-ultraviolet-bg text-white'
-      : theme === 'glacial-glass'
-      ? 'glacial-glass-bg text-slate-800'
       : theme === 'cyberpunk'
       ? 'cyberpunk-bg text-white'
-      : theme === 'amoled'
-      ? 'amoled-bg text-white'
       : theme === 'aurora'
       ? 'aurora-bg text-white'
       : theme === 'sunset'
@@ -80,10 +76,13 @@ const AppContent: React.FC = () => {
 
   return (
     <div
-      className={`flex flex-col h-screen w-screen font-sans overflow-hidden select-none transition-colors duration-500 relative ${themeBgClass}`}
+      className={`flex flex-col h-[100dvh] w-screen font-sans overflow-hidden select-none transition-colors duration-300 relative ${themeBgClass}`}
     >
       {/* Main Work Area */}
-      <div className={`flex flex-1 overflow-hidden p-2 gap-2.5 z-10 ${isLiquidGlass ? 'pb-2' : ''}`}>
+      <div
+        style={{ paddingTop: 'calc(6px + var(--safe-top, 0px))' }}
+        className={`flex flex-1 overflow-hidden px-1.5 pb-1.5 sm:p-2 gap-2.5 z-10 ${isLiquidGlass ? 'pb-2' : ''}`}
+      >
         {/* Desktop Left Sidebar (Hidden on mobile) */}
         <div className="hidden md:flex h-full">
           <SidebarNav
@@ -96,8 +95,8 @@ const AppContent: React.FC = () => {
 
         {/* Center Main Stage */}
         <main
-          className={`flex-1 rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 pb-32 md:pb-0 ${
-            isVelvetStyle || isUltraviolet || isGlacialGlass
+          className={`flex-1 rounded-2xl overflow-hidden flex flex-col relative pb-[calc(112px+var(--safe-bottom,0px))] md:pb-0 ${
+            isVelvetStyle || isUltraviolet
               ? 'bg-transparent'
               : isLiquidGlass
               ? 'glass-panel'

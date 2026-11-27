@@ -45,7 +45,10 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
   // Velvet & Spatial Liquid Glass Metaball Volume Mini-Player
   if (isVelvetStyle) {
     return (
-      <div className="fixed bottom-[88px] inset-x-0 z-40 md:hidden px-2 pointer-events-none">
+      <div
+        style={{ bottom: 'calc(100px + var(--safe-bottom, 0px))' }}
+        className="fixed inset-x-0 z-40 md:hidden px-2 pointer-events-none"
+      >
         <VelvetMetaballVolumeMiniPlayer onOpenFullPlayer={onOpenFullPlayer} />
       </div>
     );
@@ -56,14 +59,15 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
   return (
     <div
       onClick={onOpenFullPlayer}
-      className={`fixed z-40 md:hidden flex items-center justify-between px-3 cursor-pointer select-none shadow-2xl transition-all ${
+      style={{ bottom: 'calc(82px + var(--safe-bottom, 0px))' }}
+      className={`fixed z-40 md:hidden flex items-center justify-between px-3.5 cursor-pointer select-none shadow-2xl transition-colors ${
         isUltraviolet
-          ? 'bottom-[84px] left-4 right-4 max-w-[360px] mx-auto h-14 rounded-full glass-player border border-white/20 shadow-[0_0_24px_rgba(217,70,239,0.3)]'
+          ? 'left-4 right-4 max-w-[380px] mx-auto h-14 rounded-full glass-player border border-white/20 shadow-[0_0_24px_rgba(217,70,239,0.3)]'
           : isVelvetLime
-          ? 'bottom-[88px] left-4 right-4 max-w-[360px] mx-auto h-14 rounded-full frosted-3d-dock border border-white/20'
+          ? 'left-4 right-4 max-w-[380px] mx-auto h-14 rounded-full frosted-3d-dock border border-white/20'
           : isLiquidGlass
-          ? 'bottom-14 left-2 right-2 h-14 rounded-lg glass-player border border-white/25 backdrop-blur-2xl'
-          : 'bottom-14 left-2 right-2 h-14 rounded-lg bg-[#282828] text-white border border-[#383838]'
+          ? 'left-2.5 right-2.5 h-14 rounded-2xl glass-player border border-white/25'
+          : 'left-2.5 right-2.5 h-14 rounded-2xl bg-[#26262a] text-white border border-[#38383d]'
       }`}
     >
       {/* Left: Track Info & Artwork */}

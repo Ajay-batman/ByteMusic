@@ -6,16 +6,14 @@ export type AppTheme =
   | 'velvet-lime'
   | 'cosmic-ultraviolet'
   | 'cyberpunk'
-  | 'amoled'
   | 'aurora'
-  | 'glacial-glass'
   | 'sunset'
   | 'frost';
 
 export interface ThemeDefinition {
   id: AppTheme;
   name: string;
-  category: 'Classic' | 'Glass' | 'Aesthetic' | 'Vibrant' | 'Minimalist';
+  category: 'Classic' | 'Glass' | 'Aesthetic' | 'Vibrant';
   description: string;
   previewColors: string[];
   accentColor: string;
@@ -54,14 +52,6 @@ export const THEME_REGISTRY: Record<AppTheme, ThemeDefinition> = {
     previewColors: ['#0a0a14', '#00f0ff', '#ff007f'],
     accentColor: '#00f0ff',
   },
-  'amoled': {
-    id: 'amoled',
-    name: 'Pure AMOLED',
-    category: 'Minimalist',
-    description: 'Pitch black #000000 with high-contrast borders for maximum OLED battery savings.',
-    previewColors: ['#000000', '#1a1a1a', '#7c3aed'],
-    accentColor: '#7c3aed',
-  },
   'aurora': {
     id: 'aurora',
     name: 'Spatial Aurora',
@@ -86,14 +76,6 @@ export const THEME_REGISTRY: Record<AppTheme, ThemeDefinition> = {
     previewColors: ['#f0f9ff', '#38bdf8', '#818cf8'],
     accentColor: '#38bdf8',
   },
-  'glacial-glass': {
-    id: 'glacial-glass',
-    name: 'Glacial Liquid Glass',
-    category: 'Glass',
-    description: 'Ethereal frosted ice glassmorphism, iridescent specular light, and curved radial arc controls.',
-    previewColors: ['#c3d7e8', '#e2edf7', '#60a5fa'],
-    accentColor: '#38bdf8',
-  },
   'cosmic-ultraviolet': {
     id: 'cosmic-ultraviolet',
     name: 'Cosmic Ultraviolet',
@@ -111,9 +93,7 @@ interface ThemeContextType {
   isLiquidGlass: boolean;
   isVelvetLime: boolean;
   isUltraviolet: boolean;
-  isGlacialGlass: boolean;
   isCyberpunk: boolean;
-  isAmoled: boolean;
   isAurora: boolean;
   isSunset: boolean;
   isFrost: boolean;
@@ -130,9 +110,11 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<AppTheme>(() => {
     try {
-      const saved = localStorage.getItem('spotify_app_theme') as AppTheme;
-      if (saved && THEME_REGISTRY[saved]) {
-        return saved;
+      const saved = localStorage.getItem('spotify_app_theme') as string | null;
+      if (saved === 'amoled') return 'dark';
+      if (saved === 'glacial-glass') return 'frost';
+      if (saved && THEME_REGISTRY[saved as AppTheme]) {
+        return saved as AppTheme;
       }
     } catch {}
     return 'dark';
@@ -166,9 +148,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       'theme-velvet-lime',
       'theme-cosmic-ultraviolet',
       'theme-cyberpunk',
-      'theme-amoled',
       'theme-aurora',
-      'theme-glacial-glass',
       'theme-sunset',
       'theme-frost',
       'theme-light'
@@ -192,9 +172,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isLiquidGlass: theme === 'liquid-glass',
         isVelvetLime: theme === 'velvet-lime',
         isUltraviolet: theme === 'cosmic-ultraviolet',
-        isGlacialGlass: theme === 'glacial-glass',
         isCyberpunk: theme === 'cyberpunk',
-        isAmoled: theme === 'amoled',
         isAurora: theme === 'aurora',
         isSunset: theme === 'sunset',
         isFrost: theme === 'frost',

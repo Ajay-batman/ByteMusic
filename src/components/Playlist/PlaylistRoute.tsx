@@ -35,8 +35,8 @@ export const PlaylistRoute: React.FC<PlaylistRouteProps> = ({ playlist, onSelect
     refreshRecommendations,
   } = useLibrary();
   const { downloadPlaylist, isDownloaded } = useDownload();
-  const { isUltraviolet, isVelvetLime, isGlacialGlass, isFrost, isAurora, isSunset, isVelvetStyle, isLiquidGlass } = useTheme();
-  const isLightHeader = isGlacialGlass || isFrost;
+  const { isUltraviolet, isVelvetLime, isFrost, isAurora, isSunset, isVelvetStyle, isLiquidGlass } = useTheme();
+  const isLightHeader = isFrost;
   const isSpatialGlass = isVelvetStyle || isLiquidGlass;
   const isAllDownloaded = playlist.tracks.length > 0 && playlist.tracks.every((t) => isDownloaded(t.id));
   const firstTrack = playlist.tracks[0];
@@ -135,9 +135,7 @@ export const PlaylistRoute: React.FC<PlaylistRouteProps> = ({ playlist, onSelect
                   : 'bg-white/[0.06] border-white/25 text-white'
               }`
             : `p-4 sm:p-6 pb-4 bg-gradient-to-b ${
-                isGlacialGlass
-                  ? 'from-sky-200/80 via-sky-100/40 to-transparent text-slate-800'
-                  : isUltraviolet
+                isUltraviolet
                   ? 'from-[#3a1563] via-[#1a0c3b] to-transparent'
                   : isFavorites
                   ? 'from-[#450af5] via-[#20058a] to-[#121212]'

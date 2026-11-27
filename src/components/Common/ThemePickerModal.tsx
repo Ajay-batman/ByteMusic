@@ -1,22 +1,18 @@
 import React from 'react';
-import { Palette, Check, X, Sparkles, Moon, Zap, Shield, Compass } from 'lucide-react';
+import { Palette, Check, X, Sparkles, Moon, Zap, Compass } from 'lucide-react';
 import { useTheme, THEME_REGISTRY, AppTheme } from '../../context/ThemeContext';
-
-const HIDDEN_MENU_THEMES = new Set<AppTheme>(['amoled', 'glacial-glass']);
 
 export const ThemePickerModal: React.FC = () => {
   const { theme, setTheme, isThemeModalOpen, closeThemeModal, isLiquidGlass, isFrost } = useTheme();
 
   if (!isThemeModalOpen) return null;
 
-  const themesList = Object.values(THEME_REGISTRY).filter((item) => !HIDDEN_MENU_THEMES.has(item.id));
+  const themesList = Object.values(THEME_REGISTRY);
 
   const getThemeIcon = (id: AppTheme) => {
     switch (id) {
       case 'dark':
         return <Moon size={16} className="text-[#1db954]" />;
-      case 'glacial-glass':
-        return <Sparkles size={16} className="text-sky-300" />;
       case 'cosmic-ultraviolet':
         return <Sparkles size={16} className="text-[#d946ef]" />;
       case 'velvet-lime':
@@ -25,8 +21,6 @@ export const ThemePickerModal: React.FC = () => {
         return <Sparkles size={16} className="text-cyan-300" />;
       case 'cyberpunk':
         return <Zap size={16} className="text-pink-400" />;
-      case 'amoled':
-        return <Shield size={16} className="text-purple-400" />;
       case 'aurora':
         return <Compass size={16} className="text-emerald-400" />;
       case 'sunset':

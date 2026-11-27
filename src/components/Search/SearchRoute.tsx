@@ -903,11 +903,11 @@ const TopArtistPlaylistCard: React.FC<{
     <div
       onClick={onOpen}
       style={{
-        backdropFilter: 'blur(20px) saturate(185%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(185%)',
+        backdropFilter: 'blur(10px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(10px) saturate(140%)',
         boxShadow: isFrost
-          ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 16px 36px -8px rgba(15,23,42,0.09)'
-          : 'inset 0 1.5px 1.5px rgba(255,255,255,0.55), inset 0 -1.5px 2px rgba(255,255,255,0.18), 0 20px 42px -12px rgba(0,0,0,0.52)',
+          ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 14px 30px -8px rgba(15,23,42,0.09)'
+          : 'inset 0 1.5px 1.5px rgba(255,255,255,0.45), 0 16px 34px -12px rgba(0,0,0,0.48)',
       }}
       className={`group relative p-5 rounded-[24px] border transition-all duration-300 cursor-pointer select-none overflow-hidden ${
         isFrost
@@ -1036,16 +1036,15 @@ const PlaylistSearchCard: React.FC<{ playlist: Playlist; onOpen: () => void }> =
     <div
       onClick={onOpen}
       style={{
-        backdropFilter: 'blur(18px) saturate(185%)',
-        WebkitBackdropFilter: 'blur(18px) saturate(185%)',
+        contain: 'layout paint',
         boxShadow: isFrost
-          ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 10px 24px -6px rgba(15,23,42,0.08)'
-          : 'inset 0 1.5px 1.5px rgba(255,255,255,0.45), 0 14px 28px -10px rgba(0,0,0,0.48)',
+          ? 'inset 0 1px 1px rgba(255,255,255,0.95), 0 8px 20px -6px rgba(15,23,42,0.08)'
+          : 'inset 0 1px 1px rgba(255,255,255,0.28), 0 10px 24px -10px rgba(0,0,0,0.45)',
       }}
-      className={`group relative rounded-[20px] p-3.5 border transition-all duration-300 cursor-pointer flex flex-col gap-3 ${
+      className={`group relative rounded-[20px] p-3.5 border transition-colors duration-200 cursor-pointer flex flex-col gap-3 ${
         isFrost
-          ? 'bg-white/75 hover:bg-white border-slate-200/90 text-slate-900'
-          : 'bg-white/[0.06] hover:bg-white/[0.12] border-white/20 text-white'
+          ? 'bg-white/80 hover:bg-white border-slate-200/90 text-slate-900'
+          : 'bg-white/[0.08] hover:bg-white/[0.13] border-white/20 text-white'
       }`}
     >
       <div className="relative aspect-square rounded-2xl overflow-hidden shadow-md bg-slate-900/40">
@@ -1128,16 +1127,15 @@ const ArtistSearchCard: React.FC<{
     <div
       onClick={onOpen}
       style={{
-        backdropFilter: 'blur(18px) saturate(185%)',
-        WebkitBackdropFilter: 'blur(18px) saturate(185%)',
+        contain: 'layout paint',
         boxShadow: isFrost
-          ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 10px 24px -6px rgba(15,23,42,0.08)'
-          : 'inset 0 1.5px 1.5px rgba(255,255,255,0.45), 0 14px 28px -10px rgba(0,0,0,0.48)',
+          ? 'inset 0 1px 1px rgba(255,255,255,0.95), 0 8px 20px -6px rgba(15,23,42,0.08)'
+          : 'inset 0 1px 1px rgba(255,255,255,0.28), 0 10px 24px -10px rgba(0,0,0,0.45)',
       }}
-      className={`group relative rounded-[20px] p-4 border transition-all duration-300 cursor-pointer flex flex-col items-center text-center gap-3 ${
+      className={`group relative rounded-[20px] p-4 border transition-colors duration-200 cursor-pointer flex flex-col items-center text-center gap-3 ${
         isFrost
-          ? 'bg-white/75 hover:bg-white border-slate-200/90 text-slate-900'
-          : 'bg-white/[0.06] hover:bg-white/[0.12] border-white/20 text-white'
+          ? 'bg-white/80 hover:bg-white border-slate-200/90 text-slate-900'
+          : 'bg-white/[0.08] hover:bg-white/[0.13] border-white/20 text-white'
       }`}
     >
       <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden shadow-xl border-2 border-white/25 bg-slate-900/40">
@@ -1213,16 +1211,15 @@ const CollectionSearchCard: React.FC<{
     <div
       onClick={onOpen}
       style={{
-        backdropFilter: 'blur(18px) saturate(185%)',
-        WebkitBackdropFilter: 'blur(18px) saturate(185%)',
+        contain: 'layout paint',
         boxShadow: isFrost
-          ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 10px 24px -6px rgba(15,23,42,0.08)'
-          : 'inset 0 1.5px 1.5px rgba(255,255,255,0.45), 0 14px 28px -10px rgba(0,0,0,0.48)',
+          ? 'inset 0 1px 1px rgba(255,255,255,0.95), 0 8px 20px -6px rgba(15,23,42,0.08)'
+          : 'inset 0 1px 1px rgba(255,255,255,0.28), 0 10px 24px -10px rgba(0,0,0,0.45)',
       }}
-      className={`group relative rounded-[20px] p-3.5 border transition-all duration-300 cursor-pointer flex flex-col gap-3 ${
+      className={`group relative rounded-[20px] p-3.5 border transition-colors duration-200 cursor-pointer flex flex-col gap-3 ${
         isFrost
-          ? 'bg-white/75 hover:bg-white border-slate-200/90 text-slate-900'
-          : 'bg-white/[0.06] hover:bg-white/[0.12] border-white/20 text-white'
+          ? 'bg-white/80 hover:bg-white border-slate-200/90 text-slate-900'
+          : 'bg-white/[0.08] hover:bg-white/[0.13] border-white/20 text-white'
       }`}
     >
       <div className="relative aspect-square rounded-2xl overflow-hidden shadow-md bg-slate-900/40">
@@ -1304,11 +1301,11 @@ const TopResultCard: React.FC<{ track: Track; queue?: Track[] }> = ({ track, que
     <div
       onClick={() => togglePlay()}
       style={{
-        backdropFilter: 'blur(20px) saturate(185%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(185%)',
+        backdropFilter: 'blur(10px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(10px) saturate(140%)',
         boxShadow: isFrost
-          ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 16px 36px -8px rgba(15,23,42,0.09)'
-          : 'inset 0 1.5px 1.5px rgba(255,255,255,0.55), inset 0 -1.5px 2px rgba(255,255,255,0.18), 0 20px 42px -12px rgba(0,0,0,0.52)',
+          ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 14px 30px -8px rgba(15,23,42,0.09)'
+          : 'inset 0 1.5px 1.5px rgba(255,255,255,0.45), 0 16px 34px -12px rgba(0,0,0,0.48)',
       }}
       className={`group relative p-5 rounded-[24px] border transition-all duration-300 cursor-pointer select-none overflow-hidden ${
         isFrost
@@ -1456,8 +1453,8 @@ const TopResultCard: React.FC<{ track: Track; queue?: Track[] }> = ({ track, que
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
-            backdropFilter: 'blur(24px) saturate(190%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(190%)',
+            backdropFilter: 'blur(12px) saturate(145%)',
+            WebkitBackdropFilter: 'blur(12px) saturate(145%)',
           }}
           className={`absolute right-5 bottom-20 w-64 rounded-2xl border shadow-2xl p-2 text-xs text-left z-50 select-none ${
             isFrost

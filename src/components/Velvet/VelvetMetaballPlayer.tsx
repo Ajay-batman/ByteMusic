@@ -118,7 +118,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
   // DOM Refs for 60fps zero-rerender physics engine
   const blurRef = useRef<SVGFEGaussianBlurElement>(null);
   const matrixRef = useRef<SVGFEColorMatrixElement>(null);
-  const causticRef = useRef<SVGFETurbulenceElement>(null);
+  const wakePhysicsRef = useRef<(() => void) | null>(null);
 
   // Card Shell Refs
   const cardGooRef = useRef<HTMLDivElement>(null);
@@ -196,7 +196,6 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     slotVels: [0, 0, 0, 0],
     wasFusedSlot: 1,
 
-    causticPhase: 0,
     vizPhase: 0,
     lastFrameTime: performance.now(),
     viscosity,
@@ -239,18 +238,22 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
 
   useEffect(() => {
     phys.current.stiffness = stiffness;
+    wakePhysicsRef.current?.();
   }, [stiffness]);
 
   useEffect(() => {
     phys.current.isPlaying = isPlaying;
+    wakePhysicsRef.current?.();
   }, [isPlaying]);
 
   useEffect(() => {
     phys.current.durationSec = effectiveDurationSec;
+    wakePhysicsRef.current?.();
   }, [effectiveDurationSec]);
 
   useEffect(() => {
     phys.current.targetProgress = liveProgressRatio;
+    wakePhysicsRef.current?.();
   }, [liveProgressRatio]);
 
   // Trigger subtle card jiggle when track changes externally
@@ -264,14 +267,24 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
       phys.current.thumbScaleVy -= 0.16;
       phys.current.cardScaleVx += 0.032;
       phys.current.cardScaleVy -= 0.024;
+      wakePhysicsRef.current?.();
     }
   }, [currentTrack?.id]);
 
-  // Main 60fps Liquid Glass Physics & Audio Visualizer Loop
+  // Main 60fps Liquid Glass Physics & Audio Visualizer Loop (sleeps when paused & settled)
   useEffect(() => {
-    let rafId: number;
+    let rafId = 0;
+
+    const schedule = () => {
+      if (!rafId) {
+        phys.current.lastFrameTime = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+    wakePhysicsRef.current = schedule;
 
     const tick = (now: number) => {
+      rafId = 0;
       const s = phys.current;
       const dt = Math.min(0.05, (now - s.lastFrameTime) / 1000);
       s.lastFrameTime = now;
@@ -434,19 +447,28 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
       if (dockDropletGooRef.current) dockDropletGooRef.current.style.transform = dockDropletTransform;
       if (dockDropletGlassRef.current) dockDropletGlassRef.current.style.transform = dockDropletTransform;
 
-      // 6. Living Internal Liquid Caustics Shimmer
-      s.causticPhase += 0.014;
-      if (causticRef.current) {
-        const fx = (0.014 + Math.sin(s.causticPhase) * 0.002).toFixed(5);
-        const fy = (0.028 + Math.cos(s.causticPhase * 0.8) * 0.0025).toFixed(5);
-        causticRef.current.setAttribute('baseFrequency', `${fx} ${fy}`);
+      const settled =
+        !s.isPlaying &&
+        !s.isScrubbing &&
+        !s.isDockDragging &&
+        Math.abs(s.targetProgress - s.progress) < 0.0005 &&
+        Math.abs(s.thumbVx) < 0.02 &&
+        Math.abs(s.dTargetX - s.dX) < 0.08 &&
+        Math.abs(s.dVx) < 0.02 &&
+        Math.abs(s.cardScaleX - 1) < 0.001 &&
+        Math.abs(s.cardScaleVx) < 0.001 &&
+        Math.abs(s.thumbScaleX - 1) < 0.002 &&
+        Math.abs(s.dScaleX - 1) < 0.002;
+      if (!settled) {
+        rafId = requestAnimationFrame(tick);
       }
-
-      rafId = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    wakePhysicsRef.current();
+    return () => {
+      wakePhysicsRef.current = null;
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   if (!currentTrack) return null;
@@ -496,6 +518,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
       actionsRef.current.toggleLike(actionsRef.current.currentTrack);
       pulsePlayerCard(0.02, -0.018);
     }
+    wakePhysicsRef.current?.();
   };
 
   // Scrubber Pointer Interactions (Click anywhere on bar OR drag droplet)
@@ -515,6 +538,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     phys.current.isScrubbing = true;
     phys.current.thumbScaleVy -= 0.18;
     updateProgressFromClientX(e.clientX, e.currentTarget.getBoundingClientRect());
+    wakePhysicsRef.current?.();
   };
 
   const handleScrubPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -537,6 +561,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     e.stopPropagation();
     phys.current.dockPointerDownX = e.clientX;
     phys.current.dockDragOffsetX = e.clientX - phys.current.dX;
+    wakePhysicsRef.current?.();
   };
 
   const handleDockPointerMove = (e: React.PointerEvent<HTMLElement>) => {
@@ -607,18 +632,24 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-between select-none font-sans overflow-y-auto px-4 py-5 sm:px-6 backdrop-blur-2xl transition-colors duration-500 ${
+      style={{
+        paddingTop: 'calc(18px + var(--safe-top, 0px))',
+        paddingBottom: 'calc(20px + var(--safe-bottom, 0px))',
+      }}
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-between select-none font-sans overflow-y-auto scrollbar-none px-4 sm:px-6 transition-colors duration-300 ${
         isFrost
-          ? 'bg-gradient-to-br from-sky-100 via-slate-100 to-indigo-100 text-slate-900'
+          ? 'bg-[#eef4fb] text-slate-900'
           : isAurora
-          ? 'bg-[#091522]/95 text-white'
-          : 'bg-[#150716]/95 text-white'
+          ? 'bg-[#091522] text-white'
+          : isVelvetLime
+          ? 'bg-[#0b0b14] text-white'
+          : 'bg-[#150716] text-white'
       }`}
     >
       {/* Backdrop dismiss on desktop click outside */}
       <div className="hidden md:block fixed inset-0 cursor-pointer z-0" onClick={onClose} />
 
-      {/* SVG Gooey Metaball & Liquid Caustic Filters (Exact three-layer optical setup) */}
+      {/* SVG Gooey Metaball Filter */}
       <svg className="sr-only" width="0" height="0" aria-hidden="true">
         <defs>
           <filter id={`liquid-fusion-${filterId}`} x="-40%" y="-40%" width="180%" height="180%">
@@ -637,57 +668,28 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
             />
             <feComposite in="goo" in2="goo" operator="in" />
           </filter>
-
-          <filter id={`liquid-caustic-${filterId}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence
-              ref={causticRef}
-              type="fractalNoise"
-              baseFrequency="0.014 0.028"
-              numOctaves={2}
-              seed={11}
-              result="noise"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="noise"
-              scale={10}
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
         </defs>
       </svg>
 
-      {/* Spatial Dynamic Wallpaper (Aurora, Sunset, Frost) */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        {isAurora ? (
-          <>
-            <div className="absolute -top-24 left-1/4 w-[38rem] h-[38rem] rounded-full bg-emerald-400/50 blur-[115px] animate-pulse" />
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[34rem] h-[26rem] rounded-full bg-teal-300/40 blur-[100px]" />
-            <div className="absolute top-1/3 -right-20 w-[34rem] h-[34rem] rounded-full bg-indigo-500/40 blur-[120px]" />
-            <div className="absolute -bottom-24 left-12 w-[32rem] h-[32rem] rounded-full bg-cyan-400/40 blur-[110px]" />
-          </>
-        ) : isFrost ? (
-          <>
-            <div className="absolute top-16 left-1/4 w-[30rem] h-[30rem] rounded-full bg-sky-400/35 blur-[100px]" />
-            <div className="absolute bottom-20 right-1/4 w-[32rem] h-[32rem] rounded-full bg-indigo-400/30 blur-[110px]" />
-            <div className="absolute top-1/2 left-12 w-[24rem] h-[24rem] rounded-full bg-teal-300/35 blur-[90px]" />
-          </>
-        ) : (
-          <>
-            <div className="absolute -top-20 right-1/4 w-[36rem] h-[36rem] rounded-full bg-rose-500/30 blur-[120px]" />
-            <div className="absolute top-1/3 -left-16 w-[34rem] h-[34rem] rounded-full bg-amber-500/20 blur-[115px] animate-pulse" />
-            <div className="absolute -bottom-24 right-12 w-[34rem] h-[34rem] rounded-full bg-fuchsia-600/35 blur-[120px]" />
-          </>
-        )}
-        <div
-          className={`absolute inset-0 ${
-            isFrost
-              ? 'bg-[radial-gradient(rgba(15,23,42,0.13)_1px,transparent_1px)]'
-              : 'bg-[radial-gradient(rgba(255,255,255,0.14)_1px,transparent_1px)]'
-          } [background-size:24px_24px]`}
-        />
-      </div>
+      {/* GPU-Fast Static Spatial Wallpaper (Zero animated blur-115px orbs -> eliminates flicker) */}
+      <div
+        aria-hidden="true"
+        style={{
+          backgroundImage: isAurora
+            ? 'radial-gradient(circle 480px at 22% 8%, rgba(52,211,153,0.36) 0%, transparent 70%), radial-gradient(circle 440px at 82% 28%, rgba(99,102,241,0.30) 0%, transparent 70%), radial-gradient(circle 420px at 20% 88%, rgba(34,211,238,0.28) 0%, transparent 70%), radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px)'
+            : isFrost
+            ? 'radial-gradient(circle 440px at 25% 15%, rgba(56,189,248,0.30) 0%, transparent 70%), radial-gradient(circle 440px at 80% 82%, rgba(129,140,248,0.26) 0%, transparent 70%), radial-gradient(rgba(15,23,42,0.10) 1px, transparent 1px)'
+            : isVelvetLime
+            ? 'radial-gradient(circle 480px at 14% 10%, rgba(217,70,239,0.34) 0%, rgba(168,85,247,0.18) 40%, transparent 72%), radial-gradient(circle 440px at 88% 82%, rgba(210,248,67,0.12) 0%, rgba(139,92,246,0.18) 45%, transparent 72%), radial-gradient(rgba(255,255,255,0.11) 1px, transparent 1px)'
+            : 'radial-gradient(circle 480px at 75% 10%, rgba(244,63,94,0.32) 0%, transparent 70%), radial-gradient(circle 440px at 12% 45%, rgba(245,158,11,0.20) 0%, transparent 70%), radial-gradient(circle 440px at 82% 88%, rgba(217,70,239,0.30) 0%, transparent 70%), radial-gradient(rgba(255,255,255,0.11) 1px, transparent 1px)',
+          backgroundSize: isFrost
+            ? 'auto, auto, 24px 24px'
+            : isAurora || isVelvetLime || !isFrost
+            ? 'auto, auto, auto, 24px 24px'
+            : '24px 24px',
+        }}
+        className="pointer-events-none fixed inset-0 z-0"
+      />
 
       {/* Top Header: Status + Minimize & Quality */}
       <header className="relative z-20 w-full max-w-2xl flex items-center justify-between gap-3">
@@ -800,17 +802,16 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
           <div
             ref={cardGlassRef}
             style={{
-              backdropFilter: 'blur(16px) saturate(185%)',
-              WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+              backdropFilter: 'blur(12px) saturate(145%)',
+              WebkitBackdropFilter: 'blur(12px) saturate(145%)',
               boxShadow: `inset 0 1.5px 1.5px rgba(255,255,255,${specular}), inset 0 -1.5px 2px rgba(255,255,255,${
                 specular * 0.3
               }), 0 28px 60px -14px rgba(0,0,0,0.55)`,
             }}
-            className="pointer-events-none absolute inset-0 rounded-[38px] overflow-hidden border border-white/30 bg-white/[0.04] transition-colors duration-500 will-change-transform"
+            className="pointer-events-none absolute inset-0 rounded-[38px] overflow-hidden border border-white/30 bg-white/[0.05] transition-colors duration-300 will-change-transform"
           >
             <div
-              style={{ filter: `url(#liquid-caustic-${filterId})` }}
-              className="w-full h-full opacity-50 bg-gradient-to-tr from-cyan-400/20 via-transparent to-fuchsia-400/20"
+              className="w-full h-full opacity-45 bg-gradient-to-tr from-cyan-400/20 via-transparent to-fuchsia-400/20"
             />
           </div>
 
@@ -1022,17 +1023,16 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
               style={{
                 width: DOCK_WIDTH,
                 height: DOCK_HEIGHT,
-                backdropFilter: 'blur(16px) saturate(185%)',
-                WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+                backdropFilter: 'blur(12px) saturate(145%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(145%)',
                 boxShadow: `inset 0 1.5px 1.5px rgba(255,255,255,${specular}), inset 0 -1.5px 2px rgba(255,255,255,${
                   specular * 0.3
                 }), 0 24px 52px -12px rgba(0,0,0,0.52)`,
               }}
-              className="absolute rounded-full overflow-hidden border border-white/30 bg-white/[0.04] transition-colors duration-500"
+              className="absolute rounded-full overflow-hidden border border-white/30 bg-white/[0.05] transition-colors duration-300"
             >
               <div
-                style={{ filter: `url(#liquid-caustic-${filterId})` }}
-                className="w-full h-full opacity-50 bg-gradient-to-tr from-cyan-400/20 via-transparent to-fuchsia-400/20"
+                className="w-full h-full opacity-45 bg-gradient-to-tr from-cyan-400/20 via-transparent to-fuchsia-400/20"
               />
             </div>
 
@@ -1041,8 +1041,8 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
               style={{
                 width: BTN_SIZE,
                 height: BTN_SIZE,
-                backdropFilter: 'blur(16px) saturate(185%)',
-                WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+                backdropFilter: 'blur(12px) saturate(145%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(145%)',
                 boxShadow: `inset 0 1.5px 1.5px rgba(255,255,255,${Math.min(
                   1,
                   specular + 0.15
@@ -1050,11 +1050,10 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
                   specular * 0.35
                 }), 0 12px 28px -6px rgba(0,0,0,0.55)`,
               }}
-              className="absolute rounded-full overflow-hidden border border-white/45 bg-white/15 transition-colors duration-500"
+              className="absolute rounded-full overflow-hidden border border-white/45 bg-white/15 transition-colors duration-300"
             >
               <div
-                style={{ filter: `url(#liquid-caustic-${filterId})` }}
-                className="w-full h-full opacity-60 bg-gradient-to-tr from-emerald-300/25 via-transparent to-cyan-200/30"
+                className="w-full h-full opacity-55 bg-gradient-to-tr from-emerald-300/25 via-transparent to-cyan-200/30"
               />
             </div>
           </div>
@@ -1264,7 +1263,7 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
     return startCenter + idx * DOCK_STEP;
   };
 
-  const causticRef = useRef<SVGFETurbulenceElement>(null);
+  const wakePhysicsRef = useRef<(() => void) | null>(null);
   const discRef = useRef<HTMLDivElement>(null);
   const scrubThumbGooRef = useRef<HTMLDivElement>(null);
   const scrubThumbGlassRef = useRef<HTMLDivElement>(null);
@@ -1315,7 +1314,6 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
     slotScales: [1, 1, 1, 1],
     slotVels: [0, 0, 0, 0],
     wasFusedSlot: 1,
-    causticPhase: 0,
     lastFrameTime: performance.now(),
     isPlaying,
     durationSec: effectiveDurationSec,
@@ -1323,19 +1321,31 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
 
   useEffect(() => {
     phys.current.isPlaying = isPlaying;
+    wakePhysicsRef.current?.();
   }, [isPlaying]);
 
   useEffect(() => {
     phys.current.durationSec = effectiveDurationSec;
+    wakePhysicsRef.current?.();
   }, [effectiveDurationSec]);
 
   useEffect(() => {
     phys.current.targetProgress = liveProgressRatio;
+    wakePhysicsRef.current?.();
   }, [liveProgressRatio]);
 
   useEffect(() => {
-    let rafId: number;
+    let rafId = 0;
+    const schedule = () => {
+      if (!rafId) {
+        phys.current.lastFrameTime = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+    wakePhysicsRef.current = schedule;
+
     const tick = (now: number) => {
+      rafId = 0;
       const s = phys.current;
       const dt = Math.min(0.05, (now - s.lastFrameTime) / 1000);
       s.lastFrameTime = now;
@@ -1443,18 +1453,25 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
       if (dockDropletGooRef.current) dockDropletGooRef.current.style.transform = dockDropletTransform;
       if (dockDropletGlassRef.current) dockDropletGlassRef.current.style.transform = dockDropletTransform;
 
-      s.causticPhase += 0.014;
-      if (causticRef.current) {
-        const fx = (0.014 + Math.sin(s.causticPhase) * 0.002).toFixed(5);
-        const fy = (0.028 + Math.cos(s.causticPhase * 0.8) * 0.0025).toFixed(5);
-        causticRef.current.setAttribute('baseFrequency', `${fx} ${fy}`);
+      const settled =
+        !s.isPlaying &&
+        !s.isScrubbing &&
+        !s.isDockDragging &&
+        Math.abs(s.targetProgress - s.progress) < 0.0005 &&
+        Math.abs(s.thumbVx) < 0.02 &&
+        Math.abs(s.dTargetX - s.dX) < 0.08 &&
+        Math.abs(s.dVx) < 0.02 &&
+        Math.abs(s.dScaleX - 1) < 0.002;
+      if (!settled) {
+        rafId = requestAnimationFrame(tick);
       }
-
-      rafId = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    wakePhysicsRef.current();
+    return () => {
+      wakePhysicsRef.current = null;
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   if (!currentTrack) return null;
@@ -1484,6 +1501,7 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
     else if (index === 3 && actionsRef.current.currentTrack) {
       actionsRef.current.toggleLike(actionsRef.current.currentTrack);
     }
+    wakePhysicsRef.current?.();
   };
 
   const updateProgressFromClientX = (clientX: number, rect: DOMRect) => {
@@ -1548,7 +1566,7 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
 
   return (
     <footer className="mx-4 mb-3 rounded-[28px] border border-white/25 bg-white/[0.04] backdrop-blur-2xl h-22 py-2 px-5 grid grid-cols-[1fr_2fr_1fr] items-center shadow-[0_24px_52px_-12px_rgba(0,0,0,0.65)] z-50 select-none relative overflow-visible">
-      {/* SVG Filters */}
+      {/* SVG Filter */}
       <svg className="sr-only" width="0" height="0" aria-hidden="true">
         <defs>
           <filter id={`liquid-fusion-bar-${filterId}`} x="-40%" y="-40%" width="180%" height="180%">
@@ -1560,17 +1578,6 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
               result="goo"
             />
             <feComposite in="goo" in2="goo" operator="in" />
-          </filter>
-          <filter id={`liquid-caustic-bar-${filterId}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence
-              ref={causticRef}
-              type="fractalNoise"
-              baseFrequency="0.014 0.028"
-              numOctaves={2}
-              seed={11}
-              result="noise"
-            />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale={10} xChannelSelector="R" yChannelSelector="G" />
           </filter>
         </defs>
       </svg>
@@ -1663,8 +1670,8 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
               style={{
                 width: DOCK_WIDTH,
                 height: DOCK_HEIGHT,
-                backdropFilter: 'blur(16px) saturate(185%)',
-                WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+                backdropFilter: 'blur(12px) saturate(145%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(145%)',
                 boxShadow: `inset 0 1.5px 1.5px rgba(255,255,255,${specular}), inset 0 -1.5px 2px rgba(255,255,255,${
                   specular * 0.3
                 })`,
@@ -1672,8 +1679,7 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
               className="absolute rounded-full overflow-hidden border border-white/30 bg-white/[0.04]"
             >
               <div
-                style={{ filter: `url(#liquid-caustic-bar-${filterId})` }}
-                className="w-full h-full opacity-50 bg-gradient-to-tr from-cyan-400/20 via-transparent to-fuchsia-400/20"
+                className="w-full h-full opacity-45 bg-gradient-to-tr from-cyan-400/20 via-transparent to-fuchsia-400/20"
               />
             </div>
             <div
@@ -1681,15 +1687,14 @@ export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = (
               style={{
                 width: BTN_SIZE,
                 height: BTN_SIZE,
-                backdropFilter: 'blur(16px) saturate(185%)',
-                WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+                backdropFilter: 'blur(12px) saturate(145%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(145%)',
                 boxShadow: `inset 0 1.5px 1.5px rgba(255,255,255,0.9), 0 8px 18px -4px rgba(0,0,0,0.45)`,
               }}
               className="absolute rounded-full overflow-hidden border border-white/45 bg-white/15"
             >
               <div
-                style={{ filter: `url(#liquid-caustic-bar-${filterId})` }}
-                className="w-full h-full opacity-60 bg-gradient-to-tr from-emerald-300/25 via-transparent to-cyan-200/30"
+                className="w-full h-full opacity-55 bg-gradient-to-tr from-emerald-300/25 via-transparent to-cyan-200/30"
               />
             </div>
           </div>

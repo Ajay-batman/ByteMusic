@@ -29,7 +29,6 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
     isLiquidGlass,
     isVelvetLime,
     isUltraviolet,
-    isGlacialGlass,
     isVelvetStyle,
     isAurora,
     isSunset,
@@ -140,8 +139,8 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
           {/* View Mode Toggle Button */}
           <div
             style={{
-              backdropFilter: 'blur(16px) saturate(185%)',
-              WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+              backdropFilter: 'blur(10px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(10px) saturate(140%)',
               boxShadow: isFrost
                 ? 'inset 0 1px 1.5px rgba(255,255,255,0.9), 0 4px 12px rgba(15,23,42,0.06)'
                 : 'inset 0 1px 1.5px rgba(255,255,255,0.35), 0 4px 14px rgba(0,0,0,0.35)',
@@ -358,22 +357,21 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
                 key={pl.id}
                 onClick={() => onSelectPlaylist(pl)}
                 style={{
-                  backdropFilter: 'blur(16px) saturate(185%)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+                  contain: 'layout paint',
                   boxShadow: isFrost
-                    ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 14px 30px -8px rgba(15,23,42,0.08)'
-                    : 'inset 0 1.5px 1.5px rgba(255,255,255,0.55), inset 0 -1.5px 2px rgba(255,255,255,0.18), 0 20px 42px -12px rgba(0,0,0,0.52)',
+                    ? 'inset 0 1px 1px rgba(255,255,255,0.95), 0 10px 22px -8px rgba(15,23,42,0.08)'
+                    : 'inset 0 1px 1px rgba(255,255,255,0.28), 0 12px 26px -10px rgba(0,0,0,0.45)',
                 }}
-                className={`group relative overflow-hidden rounded-[22px] p-3 border transition-all duration-300 cursor-pointer select-none active:scale-[0.99] ${
+                className={`group relative overflow-hidden rounded-[22px] p-3 border transition-colors duration-200 cursor-pointer select-none active:scale-[0.99] ${
                   isFrost
-                    ? 'border-slate-200/90 bg-white/75 hover:bg-white/95 hover:border-slate-300'
+                    ? 'border-slate-200/90 bg-white/80 hover:bg-white/95 hover:border-slate-300'
                     : isAurora
-                    ? 'border-emerald-400/25 bg-white/[0.05] hover:bg-white/[0.12] hover:border-emerald-400/50'
+                    ? 'border-emerald-400/25 bg-white/[0.08] hover:bg-white/[0.13] hover:border-emerald-400/50'
                     : isSunset
-                    ? 'border-rose-400/25 bg-white/[0.05] hover:bg-white/[0.12] hover:border-rose-400/50'
+                    ? 'border-rose-400/25 bg-white/[0.08] hover:bg-white/[0.13] hover:border-rose-400/50'
                     : isVelvetLime
-                    ? 'border-white/20 bg-white/[0.05] hover:bg-white/[0.11] hover:border-[#D2F843]/40'
-                    : 'border-white/30 bg-white/[0.05] hover:bg-white/[0.11] hover:border-white/50'
+                    ? 'border-white/20 bg-white/[0.08] hover:bg-white/[0.13] hover:border-[#D2F843]/40'
+                    : 'border-white/25 bg-white/[0.08] hover:bg-white/[0.13] hover:border-white/45'
                 }`}
               >
                 {/* Subtle Internal Liquid Caustic Sheen */}
@@ -511,22 +509,21 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
                 key={pl.id}
                 onClick={() => onSelectPlaylist(pl)}
                 style={{
-                  backdropFilter: 'blur(16px) saturate(185%)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+                  contain: 'layout paint',
                   boxShadow: isFrost
-                    ? 'inset 0 1px 1px rgba(255,255,255,0.9), 0 8px 20px -6px rgba(15,23,42,0.06)'
-                    : 'inset 0 1px 1.5px rgba(255,255,255,0.4), 0 10px 24px -6px rgba(0,0,0,0.35)',
+                    ? 'inset 0 1px 1px rgba(255,255,255,0.9), 0 8px 18px -6px rgba(15,23,42,0.06)'
+                    : 'inset 0 1px 1px rgba(255,255,255,0.24), 0 8px 20px -6px rgba(0,0,0,0.35)',
                 }}
-                className={`group flex items-center justify-between p-3 rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${
+                className={`group flex items-center justify-between p-3 rounded-2xl border transition-colors duration-200 cursor-pointer select-none active:scale-[0.99] ${
                   isFrost
-                    ? 'border-slate-200/90 bg-white/75 hover:bg-white/95 hover:border-slate-300'
+                    ? 'border-slate-200/90 bg-white/80 hover:bg-white/95 hover:border-slate-300'
                     : isAurora
-                    ? 'border-emerald-400/20 bg-white/[0.05] hover:bg-white/[0.12] hover:border-emerald-400/45'
+                    ? 'border-emerald-400/20 bg-white/[0.08] hover:bg-white/[0.13] hover:border-emerald-400/45'
                     : isSunset
-                    ? 'border-rose-400/20 bg-white/[0.05] hover:bg-white/[0.12] hover:border-rose-400/45'
+                    ? 'border-rose-400/20 bg-white/[0.08] hover:bg-white/[0.13] hover:border-rose-400/45'
                     : isVelvetLime
-                    ? 'border-white/20 bg-white/[0.05] hover:bg-white/[0.11] hover:border-[#D2F843]/40'
-                    : 'border-white/20 bg-white/[0.05] hover:bg-white/[0.12] hover:border-white/40'
+                    ? 'border-white/20 bg-white/[0.08] hover:bg-white/[0.13] hover:border-[#D2F843]/40'
+                    : 'border-white/20 bg-white/[0.08] hover:bg-white/[0.13] hover:border-white/40'
                 }`}
               >
                 {/* Left: Artwork + Details */}
@@ -628,8 +625,8 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
         <div className="fixed inset-0 bg-black/65 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div
             style={{
-              backdropFilter: 'blur(28px) saturate(190%)',
-              WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+              backdropFilter: 'blur(14px) saturate(150%)',
+              WebkitBackdropFilter: 'blur(14px) saturate(150%)',
               boxShadow: isFrost
                 ? 'inset 0 1.5px 2px rgba(255,255,255,0.95), 0 24px 60px -12px rgba(15,23,42,0.25)'
                 : 'inset 0 1.5px 2px rgba(255,255,255,0.6), 0 28px 60px -12px rgba(0,0,0,0.7)',

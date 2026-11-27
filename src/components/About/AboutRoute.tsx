@@ -26,12 +26,15 @@ interface AboutRouteProps {
 
 const ABOUT_STORAGE_KEY = 'spotify_about_fields';
 
+const HARDCODED_DEVELOPER_NAME = 'AJAY - BATMAN';
+const HARDCODED_GITHUB_URL = 'https://github.com/Ajay-batman/ByteMusic';
+
 const DEFAULT_FIELDS: AboutFields = {
   appName: 'ByteMusic',
   version: '1.0.0',
   description:
     'Spatial audio & dynamic discovery player powered by live regional charts, week-locked mixes, and personalized taste profiles.',
-  developerName: '',
+  developerName: HARDCODED_DEVELOPER_NAME,
 };
 
 function loadCachedFields(): AboutFields {
@@ -44,7 +47,7 @@ function loadCachedFields(): AboutFields {
         version: typeof parsed.version === 'string' ? parsed.version : DEFAULT_FIELDS.version,
         description:
           typeof parsed.description === 'string' ? parsed.description : DEFAULT_FIELDS.description,
-        developerName: typeof parsed.developerName === 'string' ? parsed.developerName : '',
+        developerName: HARDCODED_DEVELOPER_NAME,
       };
     }
   } catch {}
@@ -576,31 +579,36 @@ export const AboutRoute: React.FC<AboutRouteProps> = ({ onBack }) => {
                 )}
               </div>
 
-              {/* Field 4: Developer Name (Empty by default) */}
-              <div className="space-y-1.5">
-                <label className={`text-xs font-semibold uppercase tracking-wider block ${isFrost ? 'text-slate-600' : 'text-white/70'}`}>
-                  Developer Name
-                </label>
-                {isEditUnlocked ? (
-                  <input
-                    type="text"
-                    value={draftFields.developerName}
-                    onChange={(e) => {
-                      setDraftFields((prev) => ({ ...prev, developerName: e.target.value }));
-                      setSaveBanner(null);
-                    }}
-                    placeholder="Enter developer name"
-                    className={inputClass}
-                  />
-                ) : (
-                  <div className={readOnlyBoxClass}>
-                    {fields.developerName ? (
-                      fields.developerName
-                    ) : (
-                      <span className="opacity-45 italic">Empty</span>
-                    )}
+              {/* Field 4 & 5: Hardcoded Developer & GitHub Repository (Protected Section) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className={`text-xs font-semibold uppercase tracking-wider block ${isFrost ? 'text-slate-600' : 'text-white/70'}`}>
+                    Developer
+                  </label>
+                  <div className={`${readOnlyBoxClass} font-bold tracking-wide`}>
+                    {HARDCODED_DEVELOPER_NAME}
                   </div>
-                )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className={`text-xs font-semibold uppercase tracking-wider block ${isFrost ? 'text-slate-600' : 'text-white/70'}`}>
+                    GitHub Repository
+                  </label>
+                  <a
+                    href={HARDCODED_GITHUB_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${readOnlyBoxClass} block truncate underline underline-offset-2 transition-colors ${
+                      isFrost
+                        ? 'text-sky-700 hover:text-sky-900'
+                        : isVelvetLime
+                        ? 'text-[#D2F843] hover:text-white'
+                        : 'text-emerald-300 hover:text-white'
+                    }`}
+                  >
+                    Ajay-batman/ByteMusic
+                  </a>
+                </div>
               </div>
 
               {saveBanner && (

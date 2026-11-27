@@ -8,8 +8,6 @@ import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { CHART_REGIONS } from '../../services/tasteProfile';
 import { SettingsPopMenu } from '../Common/SettingsPopMenu';
-import { CosmicUltravioletShowcase } from '../Cosmic/CosmicUltravioletShowcase';
-import { GlacialGlassShowcase } from '../Glacial/GlacialGlassShowcase';
 
 interface HomeRouteProps {
   onSelectPlaylist: (playlist: Playlist) => void;
@@ -68,7 +66,6 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
     isLiquidGlass,
     isVelvetLime,
     isUltraviolet,
-    isGlacialGlass,
     isVelvetStyle,
     isAurora,
     isSunset,
@@ -111,15 +108,10 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
     }));
   };
 
-  // Glacial Liquid Glass Aesthetic Experience (Matches Uploaded Screenshot Pages 2 & 3)
-  if (isGlacialGlass) {
-    return <GlacialGlassShowcase onSelectPlaylist={onSelectPlaylist} />;
-  }
-
-  // If NOT Velvet & Spatial and NOT Cosmic Ultraviolet and NOT Glacial Glass, preserve authentic Spotify layout for other themes
+  // If NOT Velvet & Spatial and NOT Cosmic Ultraviolet, preserve authentic Spotify layout for other themes
   if (!isVelvetStyle && !isUltraviolet) {
     return (
-      <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6 sm:space-y-8">
+      <div className="flex-1 p-3.5 sm:p-6 overflow-y-auto scrollbar-none space-y-6 sm:space-y-8">
         {/* Greeting Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -226,7 +218,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
         <div className="flex items-center justify-between pt-1">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-[#d946ef] shadow-[0_0_8px_#d946ef] animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-[#d946ef] shadow-[0_0_8px_#d946ef]" />
               <span className="text-[11px] uppercase tracking-wider font-bold text-[#e879f9]/90">
                 Cosmic Experience
               </span>
@@ -590,16 +582,15 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
           }
         }}
         style={{
-          backdropFilter: 'blur(16px) saturate(185%)',
-          WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+          contain: 'layout paint',
           boxShadow: isFrost
-            ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 12px 28px -6px rgba(15,23,42,0.08)'
-            : 'inset 0 1.5px 1.5px rgba(255,255,255,0.55), inset 0 -1.5px 2px rgba(255,255,255,0.18), 0 18px 36px -12px rgba(0,0,0,0.52)',
+            ? 'inset 0 1px 1px rgba(255,255,255,0.95), 0 8px 20px -6px rgba(15,23,42,0.08)'
+            : 'inset 0 1px 1px rgba(255,255,255,0.28), 0 10px 24px -10px rgba(0,0,0,0.45)',
         }}
-        className={`group relative overflow-hidden flex items-center justify-between p-3 rounded-2xl border transition-all duration-300 cursor-pointer select-none ${
+        className={`group relative overflow-hidden flex items-center justify-between p-3 rounded-2xl border transition-colors duration-200 cursor-pointer select-none ${
           isFrost
-            ? 'border-slate-200/90 bg-white/75 hover:bg-white/95 hover:border-slate-300 active:scale-[0.99]'
-            : 'border-white/30 bg-white/[0.05] hover:bg-white/[0.11] hover:border-white/50 active:scale-[0.99]'
+            ? 'border-slate-200/90 bg-white/80 hover:bg-white/95 hover:border-slate-300 active:scale-[0.99]'
+            : 'border-white/20 bg-white/[0.08] hover:bg-white/[0.13] hover:border-white/40 active:scale-[0.99]'
         }`}
       >
         <div
@@ -668,7 +659,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
   };
 
   return (
-    <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6 sm:space-y-7 scrollbar-none">
+    <div className="flex-1 p-3.5 sm:p-6 overflow-y-auto overflow-x-hidden space-y-5 sm:space-y-7 scrollbar-none">
       {/* Header Bar */}
       <div className="flex items-center justify-between pt-1">
         {/* Left: Greeting with "Hi, Listener" (No profile picture) */}
@@ -747,17 +738,17 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
       {/* Curated & Trending Hero Banner: Week-Locked Discover Weekly + Manual Refresh */}
       <div
         style={{
-          backdropFilter: 'blur(24px) saturate(190%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(190%)',
+          backdropFilter: 'blur(12px) saturate(145%)',
+          WebkitBackdropFilter: 'blur(12px) saturate(145%)',
           boxShadow: isFrost
-            ? 'inset 0 1.5px 2px rgba(255,255,255,0.95), inset 0 -1.5px 2px rgba(15,23,42,0.05), 0 20px 48px -12px rgba(15,23,42,0.12)'
+            ? 'inset 0 1.5px 2px rgba(255,255,255,0.95), inset 0 -1.5px 2px rgba(15,23,42,0.05), 0 16px 36px -12px rgba(15,23,42,0.12)'
             : isAurora
-            ? 'inset 0 1.5px 2px rgba(52,211,153,0.35), 0 24px 54px -12px rgba(2,12,20,0.7)'
+            ? 'inset 0 1.5px 2px rgba(52,211,153,0.35), 0 20px 44px -12px rgba(2,12,20,0.65)'
             : isSunset
-            ? 'inset 0 1.5px 2px rgba(244,63,94,0.35), 0 24px 54px -12px rgba(21,7,22,0.7)'
-            : 'inset 0 1.5px 2px rgba(255,255,255,0.7), 0 24px 54px -12px rgba(0,0,0,0.5)',
+            ? 'inset 0 1.5px 2px rgba(244,63,94,0.35), 0 20px 44px -12px rgba(21,7,22,0.65)'
+            : 'inset 0 1.5px 2px rgba(255,255,255,0.7), 0 20px 44px -12px rgba(0,0,0,0.48)',
         }}
-        className={`relative overflow-hidden rounded-[28px] p-5 sm:p-7 border flex items-center justify-between gap-4 transition-all duration-300 ${
+        className={`relative overflow-hidden rounded-[26px] p-4 sm:p-7 border flex items-center justify-between gap-3 sm:gap-4 transition-colors duration-200 ${
           isFrost
             ? 'bg-white/75 border-white/90 text-slate-900'
             : isAurora
@@ -843,7 +834,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
               onClick={() => refreshDiscoverWeekly()}
               disabled={isLoadingDiscover}
               title="Refresh Discover Weekly Mix"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap shrink-0 transition-transform active:scale-95 cursor-pointer disabled:opacity-50 ${
                 isFrost
                   ? 'bg-white/85 text-slate-900 hover:bg-white border border-slate-200 shadow-sm'
                   : isAurora || isSunset
@@ -857,7 +848,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
             <button
               onClick={() => onSelectPlaylist(discoverPlaylist)}
               title="Open Discover Weekly"
-              className={`p-2.5 rounded-full transition-colors cursor-pointer ${
+              className={`p-2 rounded-full transition-colors cursor-pointer shrink-0 ${
                 isFrost
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/50'
                   : isAurora
@@ -876,7 +867,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
           <img
             src={discoverPlaylist.images[0]?.url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300'}
             alt={discoverPlaylist.name}
-            className={`w-28 h-28 sm:w-36 sm:h-36 rounded-2xl object-cover shadow-2xl border-2 ${
+            className={`w-24 h-24 sm:w-36 sm:h-36 rounded-2xl object-cover shadow-2xl border-2 ${
               isFrost ? 'border-white/90 shadow-slate-300/50' : 'border-white/60'
             }`}
           />
@@ -1038,16 +1029,15 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
               key={pl.id}
               onClick={() => onSelectPlaylist(pl)}
               style={{
-                backdropFilter: 'blur(16px) saturate(185%)',
-                WebkitBackdropFilter: 'blur(16px) saturate(185%)',
+                contain: 'layout paint',
                 boxShadow: isFrost
-                  ? 'inset 0 1.5px 1.5px rgba(255,255,255,0.95), 0 14px 30px -8px rgba(15,23,42,0.09)'
-                  : 'inset 0 1.5px 1.5px rgba(255,255,255,0.55), inset 0 -1.5px 2px rgba(255,255,255,0.18), 0 20px 42px -12px rgba(0,0,0,0.52)',
+                  ? 'inset 0 1px 1px rgba(255,255,255,0.95), 0 10px 22px -8px rgba(15,23,42,0.09)'
+                  : 'inset 0 1px 1px rgba(255,255,255,0.28), 0 12px 28px -10px rgba(0,0,0,0.45)',
               }}
-              className={`group relative overflow-hidden p-3 rounded-2xl border transition-all duration-300 cursor-pointer select-none ${
+              className={`group relative overflow-hidden p-3 rounded-2xl border transition-colors duration-200 cursor-pointer select-none ${
                 isFrost
-                  ? 'border-slate-200/90 bg-white/75 hover:bg-white/95 hover:border-slate-300'
-                  : 'border-white/30 bg-white/[0.05] hover:bg-white/[0.11] hover:border-white/50'
+                  ? 'border-slate-200/90 bg-white/80 hover:bg-white/95 hover:border-slate-300'
+                  : 'border-white/20 bg-white/[0.08] hover:bg-white/[0.13] hover:border-white/40'
               }`}
             >
               {/* Subtle Internal Liquid Caustic Sheen */}
