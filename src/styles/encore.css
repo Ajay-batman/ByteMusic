@@ -574,21 +574,21 @@ body {
     to   { opacity: 1; transform: translate3d(0, 0, 0) scale3d(1, 1, 1); }
   }
 
-  .anim-page-forward { animation: pageForward 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .anim-page-back    { animation: pageBack 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .anim-page-right   { animation: pageRight 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .anim-page-left    { animation: pageLeft 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .anim-page-fade    { animation: pageFade 200ms ease both; }
-  .anim-player-sheet-in  { animation: playerSheetIn 320ms cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform, opacity; }
-  .anim-player-sheet-out { animation: playerSheetOut 260ms cubic-bezier(0.32, 0.72, 0, 1) both; will-change: transform, opacity; pointer-events: none; }
-  .anim-scrim-in  { animation: scrimIn 260ms ease both; }
+  .anim-page-forward { animation: pageForward 280ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .anim-page-back    { animation: pageBack 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .anim-page-right   { animation: pageRight 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .anim-page-left    { animation: pageLeft 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .anim-page-fade    { animation: pageFade 200ms ease backwards; }
+  .anim-player-sheet-in  { animation: playerSheetIn 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .anim-player-sheet-out { animation: playerSheetOut 260ms cubic-bezier(0.32, 0.72, 0, 1) both; pointer-events: none; }
+  .anim-scrim-in  { animation: scrimIn 260ms ease backwards; }
   .anim-scrim-out { animation: scrimOut 240ms ease both; }
   .anim-stagger-item {
-    animation: staggerItem 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: calc(min(var(--stagger-i, 0), 10) * 28ms);
+    animation: staggerItem 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(min(var(--stagger-i, 0), 8) * 24ms);
   }
-  .anim-mini-enter { animation: miniPlayerEnter 300ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .anim-modal-in   { animation: modalIn 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .anim-mini-enter { animation: miniPlayerEnter 280ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  .anim-modal-in   { animation: modalIn 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
   .anim-shimmer {
     position: relative;
     overflow: hidden;

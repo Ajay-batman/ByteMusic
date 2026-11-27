@@ -608,8 +608,8 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
             }}
             className={`absolute rounded-full overflow-hidden border transition-colors duration-500 ${
               isFrost
-                ? 'border-slate-300/80 bg-white/80'
-                : 'border-white/30 bg-white/[0.06]'
+                ? 'border-slate-300/80 bg-white/85'
+                : 'border-white/30 bg-[#0f101c]/70'
             }`}
           >
             <div
@@ -637,8 +637,8 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
             }}
             className={`absolute rounded-full overflow-hidden border transition-colors duration-500 ${
               isFrost
-                ? 'border-slate-300/80 bg-white/85'
-                : 'border-white/35 bg-white/[0.08]'
+                ? 'border-slate-300/80 bg-white/90'
+                : 'border-white/35 bg-[#0f101c]/70'
             }`}
           >
             <div

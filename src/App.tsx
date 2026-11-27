@@ -144,6 +144,9 @@ const AppContent: React.FC = () => {
 
           <div
             key={routeAnimKey}
+            onAnimationEnd={() => {
+              if (routeAnimClass) setRouteAnimClass('');
+            }}
             className={`flex-1 flex flex-col min-h-0 overflow-hidden ${routeAnimClass}`}
           >
             <Suspense fallback={<RouteLoadingFallback />}>
