@@ -23,7 +23,14 @@ import { mockTracks } from '../../data/mockSpotifyCatalog';
 import { AudioQuality, Track } from '../../types/spotify';
 import { LiquidGlassSlider } from '../Common/LiquidGlassSlider';
 import { DownloadButton } from '../Common/DownloadButton';
-import { consumeTransitionOrigin, runFlipCoverAnimation, runFlipToMiniPlayer } from '../../utils/motion';
+import {
+  consumeTransitionOrigin,
+  hasMiniPlayerContainer,
+  runContainerCloseToMiniPlayer,
+  runContainerOpenFromMiniPlayer,
+  runFlipCoverAnimation,
+  runFlipToMiniPlayer,
+} from '../../utils/motion';
 
 function formatTimeSeconds(sec: number): string {
   const clamped = Math.max(0, Math.floor(sec));
@@ -634,13 +641,17 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
   const isLight = isFrost;
   const [dragY, setDragY] = useState(0);
   const swipeStartRef = useRef<{ y: number; t: number } | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const hasMiniAnchor = hasMiniPlayerContainer();
 
   useLayoutEffect(() => {
     if (!currentTrack) return;
     if (isClosing) {
+      runContainerCloseToMiniPlayer(sheetRef.current);
       runFlipToMiniPlayer(discFlipRef.current);
       return;
     }
+    runContainerOpenFromMiniPlayer(sheetRef.current);
     const origin = consumeTransitionOrigin(currentTrack.album.images[0]?.url);
     runFlipCoverAnimation(discFlipRef.current, origin);
   }, [currentTrack?.id, isClosing]);
@@ -671,13 +682,14 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
 
   return (
     <div
+      ref={sheetRef}
       style={{
         paddingTop: 'calc(18px + var(--safe-top, 0px))',
         paddingBottom: 'calc(20px + var(--safe-bottom, 0px))',
         ...(dragY > 0 ? { transform: `translate3d(0, ${dragY}px, 0)`, transition: 'none' } : {}),
       }}
       className={`fixed inset-0 z-50 flex flex-col items-center justify-between select-none font-sans overflow-y-auto scrollbar-none px-4 sm:px-6 transition-colors duration-300 ${
-        isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
+        hasMiniAnchor ? (isClosing ? 'pointer-events-none' : '') : isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
       } ${
         isFrost
           ? 'bg-[#eef4fb] text-slate-900'

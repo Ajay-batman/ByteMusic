@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext';
 import { useTheme } from '../../context/ThemeContext';
-import { captureTransitionOrigin, registerMiniPlayerArtwork } from '../../utils/motion';
+import { captureTransitionOrigin, registerMiniPlayerArtwork, registerMiniPlayerContainer } from '../../utils/motion';
 
 interface VelvetMetaballVolumeMiniPlayerProps {
   onOpenFullPlayer: () => void;
@@ -113,7 +113,11 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
 
   useEffect(() => {
     registerMiniPlayerArtwork(artworkDiscRef.current);
-    return () => registerMiniPlayerArtwork(null);
+    registerMiniPlayerContainer(primaryContentRef.current);
+    return () => {
+      registerMiniPlayerArtwork(null);
+      registerMiniPlayerContainer(null);
+    };
   }, [currentTrack?.id]);
 
   const viscosity = 13;

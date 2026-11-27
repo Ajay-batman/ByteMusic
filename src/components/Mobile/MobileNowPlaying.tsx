@@ -7,7 +7,14 @@ import { DownloadButton } from '../Common/DownloadButton';
 import { AudioQuality } from '../../types/spotify';
 import { mockTracks } from '../../data/mockSpotifyCatalog';
 import { VelvetMetaballFullPlayer } from '../Velvet/VelvetMetaballPlayer';
-import { consumeTransitionOrigin, runFlipCoverAnimation, runFlipToMiniPlayer } from '../../utils/motion';
+import {
+  consumeTransitionOrigin,
+  hasMiniPlayerContainer,
+  runContainerCloseToMiniPlayer,
+  runContainerOpenFromMiniPlayer,
+  runFlipCoverAnimation,
+  runFlipToMiniPlayer,
+} from '../../utils/motion';
 import {
   ChevronDown,
   ChevronLeft,
@@ -182,13 +189,17 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose, isC
   const [dragY, setDragY] = useState(0);
   const swipeStartRef = useRef<{ y: number; t: number } | null>(null);
   const artworkFlipRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const hasMiniAnchor = hasMiniPlayerContainer();
 
   useLayoutEffect(() => {
     if (!currentTrack || isVelvetStyle) return;
     if (isClosing) {
+      runContainerCloseToMiniPlayer(sheetRef.current);
       runFlipToMiniPlayer(artworkFlipRef.current);
       return;
     }
+    runContainerOpenFromMiniPlayer(sheetRef.current);
     const origin = consumeTransitionOrigin(currentTrack.album.images[0]?.url);
     runFlipCoverAnimation(artworkFlipRef.current, origin);
   }, [currentTrack?.id, isVelvetStyle, isClosing]);
@@ -234,9 +245,10 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose, isC
         <div className="hidden md:block absolute inset-0 cursor-pointer" onClick={onClose} />
 
         <div
+          ref={sheetRef}
           style={dragY > 0 ? { transform: `translate3d(0, ${dragY}px, 0)`, transition: 'none' } : undefined}
           className={`w-full md:max-w-md h-full md:h-[92vh] md:max-h-[820px] md:rounded-[36px] md:border md:border-white/20 glass-player shadow-[0_25px_60px_rgba(0,0,0,0.85)] flex flex-col justify-between p-6 relative overflow-hidden cosmic-now-playing-bg text-white z-10 ${
-            isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
+            hasMiniAnchor ? (isClosing ? 'pointer-events-none' : '') : isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
           }`}
         >
           {/* Top Atmospheric Aura Radiance */}
@@ -427,9 +439,10 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose, isC
   // Classic Spotify & Liquid Glass Layouts
   return (
     <div
+      ref={sheetRef}
       style={dragY > 0 ? { transform: `translate3d(0, ${dragY}px, 0)`, transition: 'none' } : undefined}
       className={`fixed inset-0 z-50 md:hidden flex flex-col justify-between p-6 select-none overflow-hidden ${
-        isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
+        hasMiniAnchor ? (isClosing ? 'pointer-events-none' : '') : isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
       } ${
         isVelvetLime
           ? 'bg-[#0B0B12] text-white'

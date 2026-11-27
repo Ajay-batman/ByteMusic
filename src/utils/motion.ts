@@ -8,6 +8,116 @@ export interface TransitionOrigin {
 
 let pendingOrigin: TransitionOrigin | null = null;
 let miniPlayerArtworkEl: HTMLElement | null = null;
+let miniPlayerContainerEl: HTMLElement | null = null;
+
+/**
+ * Registers the mini-player's outer pill container so the full player can
+ * morph out of it on open and collapse back into it on close.
+ */
+export function registerMiniPlayerContainer(el: HTMLElement | null): void {
+  miniPlayerContainerEl = el;
+}
+
+export function hasMiniPlayerContainer(): boolean {
+  if (!miniPlayerContainerEl || typeof window === 'undefined') return false;
+  try {
+    const r = miniPlayerContainerEl.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  } catch {
+    return false;
+  }
+}
+
+function getClipInsetFromRect(containerRect: DOMRect, pillRect: DOMRect): string {
+  const top = Math.max(0, pillRect.top - containerRect.top);
+  const right = Math.max(0, containerRect.right - pillRect.right);
+  const bottom = Math.max(0, containerRect.bottom - pillRect.bottom);
+  const left = Math.max(0, pillRect.left - containerRect.left);
+  const radius = Math.min(36, Math.round(pillRect.height / 2));
+  return `inset(${top.toFixed(1)}px ${right.toFixed(1)}px ${bottom.toFixed(1)}px ${left.toFixed(1)}px round ${radius}px)`;
+}
+
+/**
+ * Container Transform (Open): expands the full player sheet directly from the
+ * mini-player pill bounds using GPU-composited clip-path + transform + opacity.
+ */
+export function runContainerOpenFromMiniPlayer(sheetEl: HTMLElement | null): boolean {
+  if (!sheetEl || !miniPlayerContainerEl || typeof window === 'undefined') return false;
+  try {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+    const pill = miniPlayerContainerEl.getBoundingClientRect();
+    const sheet = sheetEl.getBoundingClientRect();
+    if (pill.width <= 0 || pill.height <= 0 || sheet.width <= 0 || sheet.height <= 0) return false;
+
+    const dx = pill.left + pill.width / 2 - (sheet.left + sheet.width / 2);
+    const dy = pill.top + pill.height / 2 - (sheet.top + sheet.height / 2);
+    const clipStart = getClipInsetFromRect(sheet, pill);
+
+    sheetEl.animate(
+      [
+        {
+          clipPath: clipStart,
+          transform: `translate3d(${(dx * 0.14).toFixed(1)}px, ${(dy * 0.14).toFixed(1)}px, 0) scale(0.95)`,
+          opacity: 0.45,
+        },
+        {
+          clipPath: 'inset(0px 0px 0px 0px round 0px)',
+          transform: 'translate3d(0, 0, 0) scale(1)',
+          opacity: 1,
+        },
+      ],
+      {
+        duration: 340,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        fill: 'backwards',
+      }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Container Transform (Close): collapses the full player sheet directly back
+ * into the mini-player pill bounds.
+ */
+export function runContainerCloseToMiniPlayer(sheetEl: HTMLElement | null): boolean {
+  if (!sheetEl || !miniPlayerContainerEl || typeof window === 'undefined') return false;
+  try {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+    const pill = miniPlayerContainerEl.getBoundingClientRect();
+    const sheet = sheetEl.getBoundingClientRect();
+    if (pill.width <= 0 || pill.height <= 0 || sheet.width <= 0 || sheet.height <= 0) return false;
+
+    const dx = pill.left + pill.width / 2 - (sheet.left + sheet.width / 2);
+    const dy = pill.top + pill.height / 2 - (sheet.top + sheet.height / 2);
+    const clipEnd = getClipInsetFromRect(sheet, pill);
+
+    sheetEl.animate(
+      [
+        {
+          clipPath: 'inset(0px 0px 0px 0px round 0px)',
+          transform: 'translate3d(0, 0, 0) scale(1)',
+          opacity: 1,
+        },
+        {
+          clipPath: clipEnd,
+          transform: `translate3d(${(dx * 0.14).toFixed(1)}px, ${(dy * 0.14).toFixed(1)}px, 0) scale(0.94)`,
+          opacity: 0.12,
+        },
+      ],
+      {
+        duration: 255,
+        easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
+        fill: 'forwards',
+      }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Registers the mini-player's left artwork element so closing the full player

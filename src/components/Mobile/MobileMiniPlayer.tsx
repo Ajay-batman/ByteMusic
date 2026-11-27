@@ -3,7 +3,7 @@ import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext'
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { VelvetMetaballVolumeMiniPlayer } from '../Velvet/VelvetMetaballVolumeMiniPlayer';
-import { captureTransitionOrigin, registerMiniPlayerArtwork } from '../../utils/motion';
+import { captureTransitionOrigin, registerMiniPlayerArtwork, registerMiniPlayerContainer } from '../../utils/motion';
 import { Play, Pause, Heart, Loader2 } from 'lucide-react';
 
 interface MobileMiniPlayerProps {
@@ -41,11 +41,16 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
   const { isLiked, toggleLike } = useLibrary();
   const { isLiquidGlass, isVelvetLime, isUltraviolet, isVelvetStyle } = useTheme();
   const artworkRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isVelvetStyle) return;
     registerMiniPlayerArtwork(artworkRef.current);
-    return () => registerMiniPlayerArtwork(null);
+    registerMiniPlayerContainer(containerRef.current);
+    return () => {
+      registerMiniPlayerArtwork(null);
+      registerMiniPlayerContainer(null);
+    };
   }, [isVelvetStyle, currentTrack?.id]);
 
   if (!currentTrack) return null;
@@ -66,6 +71,7 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
 
   return (
     <div
+      ref={containerRef}
       onClick={(e) => {
         captureTransitionOrigin(e.currentTarget, currentTrack.album.images[0]?.url);
         onOpenFullPlayer();
