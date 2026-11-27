@@ -33,9 +33,9 @@ export const ThemePickerModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md anim-scrim-in">
       <div
-        className={`w-full max-w-lg p-6 rounded-3xl shadow-2xl transition-all border ${
+        className={`w-full max-w-lg p-6 rounded-3xl shadow-2xl transition-all border anim-modal-in ${
           isFrost
             ? 'bg-white/95 border-slate-200 text-slate-900 shadow-slate-400/30'
             : isLiquidGlass
@@ -76,7 +76,7 @@ export const ThemePickerModal: React.FC = () => {
 
         {/* Themes Grid */}
         <div className="grid grid-cols-1 gap-2.5 max-h-[60vh] overflow-y-auto pr-1">
-          {themesList.map((item) => {
+          {themesList.map((item, idx) => {
             const isSelected = theme === item.id;
             return (
               <button
@@ -84,7 +84,8 @@ export const ThemePickerModal: React.FC = () => {
                 onClick={() => {
                   setTheme(item.id);
                 }}
-                className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${
+                style={{ '--stagger-i': idx } as React.CSSProperties}
+                className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer anim-stagger-item ${
                   isFrost
                     ? isSelected
                       ? 'border-slate-900/30 bg-slate-900/5 shadow-sm'

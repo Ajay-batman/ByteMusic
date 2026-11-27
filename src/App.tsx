@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Suspense, lazy } from 'react';
 import { PlaybackProvider } from './context/PlaybackContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -11,6 +11,7 @@ import { MobileMiniPlayer } from './components/Mobile/MobileMiniPlayer';
 import { VelvetMetaballNav } from './components/Velvet/VelvetMetaballNav';
 import { ThemePickerModal } from './components/Common/ThemePickerModal';
 import { AppView, Playlist } from './types/spotify';
+import { getRouteTransitionClass, prefetchRouteChunks } from './utils/motion';
 import { Loader2 } from 'lucide-react';
 
 // Route code splitting for faster startup & reduced initial JS parse time
@@ -30,12 +31,43 @@ const RouteLoadingFallback: React.FC = () => (
 
 const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('home');
+  const [routeAnimKey, setRouteAnimKey] = useState<number>(0);
+  const [routeAnimClass, setRouteAnimClass] = useState<string>('');
+  const previousViewRef = useRef<AppView>('home');
+
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('playlist-today-top-hits');
   const [transientPlaylist, setTransientPlaylist] = useState<Playlist | null>(null);
   const [playlistOrigin, setPlaylistOrigin] = useState<'home' | 'search' | 'library'>('library');
-  const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
+  const [playerStage, setPlayerStage] = useState<'closed' | 'open' | 'closing'>('closed');
   const { allPlaylists, getPlaylistById } = useLibrary();
   const { theme, isLiquidGlass, isUltraviolet, isVelvetStyle } = useTheme();
+
+  useEffect(() => {
+    prefetchRouteChunks();
+  }, []);
+
+  useEffect(() => {
+    if (playerStage !== 'closing') return;
+    const timer = window.setTimeout(() => {
+      setPlayerStage('closed');
+    }, 260);
+    return () => window.clearTimeout(timer);
+  }, [playerStage]);
+
+  const navigateToView = useCallback((nextView: AppView, forceReplay = false) => {
+    const prev = previousViewRef.current;
+    if (prev !== nextView || forceReplay) {
+      setRouteAnimClass(getRouteTransitionClass(prev, nextView));
+      setRouteAnimKey((k) => k + 1);
+      previousViewRef.current = nextView;
+    }
+    setCurrentView(nextView);
+  }, []);
+
+  const openMobilePlayer = useCallback(() => setPlayerStage('open'), []);
+  const closeMobilePlayer = useCallback(() => {
+    setPlayerStage((prev) => (prev === 'open' ? 'closing' : prev));
+  }, []);
 
   const selectedPlaylist =
     getPlaylistById(selectedPlaylistId) ||
@@ -54,7 +86,7 @@ const AppContent: React.FC = () => {
         : playlistOrigin;
     setPlaylistOrigin(origin || fallbackOrigin);
     setSelectedPlaylistId(playlist.id);
-    setCurrentView('playlist');
+    navigateToView('playlist', playlist.id !== selectedPlaylistId);
   };
 
   const themeBgClass =
@@ -87,7 +119,7 @@ const AppContent: React.FC = () => {
         <div className="hidden md:flex h-full">
           <SidebarNav
             currentView={currentView}
-            setCurrentView={setCurrentView}
+            setCurrentView={navigateToView}
             selectedPlaylist={selectedPlaylist}
             setSelectedPlaylist={handleSelectPlaylist}
           />
@@ -106,47 +138,52 @@ const AppContent: React.FC = () => {
           {/* Velvet & Spatial Responsive Desktop Navigation Bar */}
           {isVelvetStyle && (
             <div className="hidden md:flex justify-center pt-3.5 pb-1.5 px-4 flex-shrink-0 z-30 pointer-events-none">
-              <VelvetMetaballNav currentView={currentView} setCurrentView={setCurrentView} />
+              <VelvetMetaballNav currentView={currentView} setCurrentView={navigateToView} />
             </div>
           )}
 
-          <Suspense fallback={<RouteLoadingFallback />}>
-            {currentView === 'home' && (
-              <HomeRoute
-                onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'home')}
-                onOpenAbout={() => setCurrentView('about')}
-                onOpenDownloader={() => setCurrentView('downloader')}
-              />
-            )}
-            {currentView === 'search' && <SearchRoute onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'search')} />}
-            {currentView === 'library' && <LibraryRoute onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'library')} />}
-            {currentView === 'about' && <AboutRoute onBack={() => setCurrentView('home')} />}
-            {currentView === 'downloader' && <DownloaderRoute onBack={() => setCurrentView('home')} />}
-            {currentView === 'playlist' && selectedPlaylist && (
-              <PlaylistRoute
-                playlist={selectedPlaylist}
-                onSelectPlaylist={(pl) => handleSelectPlaylist(pl)}
-                backLabel={playlistOrigin === 'search' ? 'Search' : playlistOrigin === 'home' ? 'Home' : 'Library'}
-                onBack={() => setCurrentView(playlistOrigin)}
-              />
-            )}
-          </Suspense>
+          <div
+            key={routeAnimKey}
+            className={`flex-1 flex flex-col min-h-0 overflow-hidden ${routeAnimClass}`}
+          >
+            <Suspense fallback={<RouteLoadingFallback />}>
+              {currentView === 'home' && (
+                <HomeRoute
+                  onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'home')}
+                  onOpenAbout={() => navigateToView('about')}
+                  onOpenDownloader={() => navigateToView('downloader')}
+                />
+              )}
+              {currentView === 'search' && <SearchRoute onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'search')} />}
+              {currentView === 'library' && <LibraryRoute onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'library')} />}
+              {currentView === 'about' && <AboutRoute onBack={() => navigateToView('home')} />}
+              {currentView === 'downloader' && <DownloaderRoute onBack={() => navigateToView('home')} />}
+              {currentView === 'playlist' && selectedPlaylist && (
+                <PlaylistRoute
+                  playlist={selectedPlaylist}
+                  onSelectPlaylist={(pl) => handleSelectPlaylist(pl)}
+                  backLabel={playlistOrigin === 'search' ? 'Search' : playlistOrigin === 'home' ? 'Home' : 'Library'}
+                  onBack={() => navigateToView(playlistOrigin)}
+                />
+              )}
+            </Suspense>
+          </div>
         </main>
       </div>
 
       {/* Desktop Bottom Playback Controller (Hidden on mobile) */}
       <div className="hidden md:block z-20">
-        <BottomPlayerBar onOpenNowPlaying={() => setIsMobilePlayerOpen(true)} />
+        <BottomPlayerBar onOpenNowPlaying={openMobilePlayer} />
       </div>
 
       {/* Mobile Mini Player & Bottom Navigation (Visible only on mobile) */}
-      <MobileMiniPlayer onOpenFullPlayer={() => setIsMobilePlayerOpen(true)} />
-      <MobileBottomNav currentView={currentView} setCurrentView={setCurrentView} />
+      <MobileMiniPlayer onOpenFullPlayer={openMobilePlayer} />
+      <MobileBottomNav currentView={currentView} setCurrentView={navigateToView} />
 
       {/* Mobile Expandable Now Playing Screen */}
-      {isMobilePlayerOpen && (
+      {playerStage !== 'closed' && (
         <Suspense fallback={null}>
-          <MobileNowPlaying onClose={() => setIsMobilePlayerOpen(false)} />
+          <MobileNowPlaying onClose={closeMobilePlayer} isClosing={playerStage === 'closing'} />
         </Suspense>
       )}
 

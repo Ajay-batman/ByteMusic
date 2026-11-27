@@ -47,7 +47,7 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
     return (
       <div
         style={{ bottom: 'calc(100px + var(--safe-bottom, 0px))' }}
-        className="fixed inset-x-0 z-40 md:hidden px-2 pointer-events-none"
+        className="fixed inset-x-0 z-40 md:hidden px-2 pointer-events-none anim-mini-enter"
       >
         <VelvetMetaballVolumeMiniPlayer onOpenFullPlayer={onOpenFullPlayer} />
       </div>
@@ -60,7 +60,7 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
     <div
       onClick={onOpenFullPlayer}
       style={{ bottom: 'calc(82px + var(--safe-bottom, 0px))' }}
-      className={`fixed z-40 md:hidden flex items-center justify-between px-3.5 cursor-pointer select-none shadow-2xl transition-colors ${
+      className={`fixed z-40 md:hidden flex items-center justify-between px-3.5 cursor-pointer select-none shadow-2xl transition-colors anim-mini-enter ${
         isUltraviolet
           ? 'left-4 right-4 max-w-[380px] mx-auto h-14 rounded-full glass-player border border-white/20 shadow-[0_0_24px_rgba(217,70,239,0.3)]'
           : isVelvetLime

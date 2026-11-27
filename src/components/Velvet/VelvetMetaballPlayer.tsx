@@ -33,13 +33,14 @@ function formatTimeSeconds(sec: number): string {
 
 interface VelvetMetaballFullPlayerProps {
   onClose: () => void;
+  isClosing?: boolean;
 }
 
 /**
  * Full-card & mobile Now Playing experience faithfully implementing
  * ios_liquid_glass_metaball_music_player.tsx backed by live ByteMusic playback & library state.
  */
-export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> = ({ onClose }) => {
+export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> = ({ onClose, isClosing = false }) => {
   const filterId = useId().replace(/:/g, '');
   const {
     currentTrack,
@@ -629,14 +630,43 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     scrubDisplaySec !== null ? scrubDisplaySec : Math.floor(progressMs / 1000);
 
   const isLight = isFrost;
+  const [dragY, setDragY] = useState(0);
+  const swipeStartRef = useRef<{ y: number; t: number } | null>(null);
+
+  const handleSwipeStart = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    swipeStartRef.current = { y: e.clientY, t: performance.now() };
+  };
+
+  const handleSwipeMove = (e: React.PointerEvent) => {
+    if (!swipeStartRef.current) return;
+    const dy = Math.max(0, e.clientY - swipeStartRef.current.y);
+    if (dy > 6) setDragY(dy);
+  };
+
+  const handleSwipeEnd = () => {
+    if (!swipeStartRef.current) return;
+    const elapsed = Math.max(1, performance.now() - swipeStartRef.current.t);
+    const velocity = dragY / elapsed;
+    swipeStartRef.current = null;
+    if (dragY > 95 || velocity > 0.5) {
+      setDragY(0);
+      onClose();
+    } else {
+      setDragY(0);
+    }
+  };
 
   return (
     <div
       style={{
         paddingTop: 'calc(18px + var(--safe-top, 0px))',
         paddingBottom: 'calc(20px + var(--safe-bottom, 0px))',
+        ...(dragY > 0 ? { transform: `translate3d(0, ${dragY}px, 0)`, transition: 'none' } : {}),
       }}
       className={`fixed inset-0 z-50 flex flex-col items-center justify-between select-none font-sans overflow-y-auto scrollbar-none px-4 sm:px-6 transition-colors duration-300 ${
+        isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
+      } ${
         isFrost
           ? 'bg-[#eef4fb] text-slate-900'
           : isAurora
@@ -692,7 +722,13 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
       />
 
       {/* Top Header: Status + Minimize & Quality */}
-      <header className="relative z-20 w-full max-w-2xl flex items-center justify-between gap-3">
+      <header
+        onPointerDown={handleSwipeStart}
+        onPointerMove={handleSwipeMove}
+        onPointerUp={handleSwipeEnd}
+        onPointerCancel={handleSwipeEnd}
+        className="relative z-20 w-full max-w-2xl flex items-center justify-between gap-3 touch-none"
+      >
         <div className="flex items-center gap-2.5">
           <button
             type="button"

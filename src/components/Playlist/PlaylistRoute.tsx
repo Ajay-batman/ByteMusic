@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useLayoutEffect } from 'react';
 import { Playlist } from '../../types/spotify';
 import { PlaylistTrackTable } from './PlaylistTrackTable';
 import { Play, Pause, Heart, Trash2, Clock, Music, ArrowLeft, ArrowDownCircle, CheckCircle2, Shuffle, ChevronDown, RefreshCw, Globe, Sparkles, BookmarkPlus, Check } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useLibrary } from '../../context/LibraryContext';
 import { useDownload } from '../../context/DownloadContext';
 import { useTheme } from '../../context/ThemeContext';
 import { CHART_REGIONS } from '../../services/tasteProfile';
+import { consumeTransitionOrigin, runFlipCoverAnimation } from '../../utils/motion';
 
 interface PlaylistRouteProps {
   playlist: Playlist;
@@ -56,6 +57,12 @@ export const PlaylistRoute: React.FC<PlaylistRouteProps> = ({ playlist, onSelect
   const isPodcastView = playlist.id.startsWith('search-podcast-');
   const isSearchMix = isArtistMix || isAlbumView || isPodcastView;
   const isSavedSearchMix = isSearchMix && customPlaylists.some((p) => p.name.toLowerCase() === playlist.name.toLowerCase());
+  const heroArtRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const origin = consumeTransitionOrigin(playlist.images[0]?.url);
+    runFlipCoverAnimation(heroArtRef.current, origin);
+  }, [playlist.id]);
 
   const totalDurationMs = playlist.tracks.reduce(
     (acc, t) => acc + t.duration.milliseconds,
@@ -164,40 +171,45 @@ export const PlaylistRoute: React.FC<PlaylistRouteProps> = ({ playlist, onSelect
           />
         )}
 
-        {isFavorites ? (
-          isUltraviolet ? (
-            <div className="relative z-10 group flex-shrink-0">
-              <img
-                src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&h=500&fit=crop"
-                alt="Liked Songs"
-                className="w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_35px_rgba(217,70,239,0.4)] object-cover flex-shrink-0"
-              />
+        <div ref={heroArtRef} className="relative z-10 flex-shrink-0">
+          {isFavorites ? (
+            isUltraviolet ? (
+              <div className="relative z-10 group flex-shrink-0">
+                <img
+                  src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&h=500&fit=crop"
+                  alt="Liked Songs"
+                  className="w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_35px_rgba(217,70,239,0.4)] object-cover flex-shrink-0"
+                />
+              </div>
+            ) : (
+              <div className="relative z-10 w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 rounded-2xl bg-gradient-to-br from-[#450af5] to-[#8e8ee5] flex items-center justify-center flex-shrink-0 shadow-2xl border border-white/25">
+                <Heart size={64} className="text-white fill-white" />
+              </div>
+            )
+          ) : isRecentlyPlayed ? (
+            <div className={`relative z-10 w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 ${isUltraviolet ? 'rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_35px_rgba(217,70,239,0.35)]' : 'rounded-2xl border border-white/25'} bg-gradient-to-br from-[#059669] to-[#10b981] flex items-center justify-center flex-shrink-0 shadow-2xl`}>
+              <Clock size={64} className="text-white" />
             </div>
+          ) : playlist.images[0] ? (
+            <img
+              src={playlist.images[0].url}
+              alt={playlist.name}
+              decoding="async"
+              width={224}
+              height={224}
+              className={`relative z-10 w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 ${isUltraviolet ? 'rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_35px_rgba(217,70,239,0.35)]' : 'rounded-2xl border border-white/30'} shadow-2xl object-cover flex-shrink-0 bg-[#282828]`}
+            />
           ) : (
-            <div className="relative z-10 w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 rounded-2xl bg-gradient-to-br from-[#450af5] to-[#8e8ee5] flex items-center justify-center flex-shrink-0 shadow-2xl border border-white/25">
-              <Heart size={64} className="text-white fill-white" />
+            <div className={`relative z-10 w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 ${isUltraviolet ? 'rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_35px_rgba(217,70,239,0.35)]' : 'rounded-2xl border border-white/25'} bg-[#282828] flex items-center justify-center flex-shrink-0 shadow-2xl`}>
+              <Music size={64} className="text-[#757575]" />
             </div>
-          )
-        ) : isRecentlyPlayed ? (
-          <div className={`relative z-10 w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 ${isUltraviolet ? 'rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_35px_rgba(217,70,239,0.35)]' : 'rounded-2xl border border-white/25'} bg-gradient-to-br from-[#059669] to-[#10b981] flex items-center justify-center flex-shrink-0 shadow-2xl`}>
-            <Clock size={64} className="text-white" />
-          </div>
-        ) : playlist.images[0] ? (
-          <img
-            src={playlist.images[0].url}
-            alt={playlist.name}
-            decoding="async"
-            width={224}
-            height={224}
-            className={`relative z-10 w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 ${isUltraviolet ? 'rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_35px_rgba(217,70,239,0.35)]' : 'rounded-2xl border border-white/30'} shadow-2xl object-cover flex-shrink-0 bg-[#282828]`}
-          />
-        ) : (
-          <div className={`relative z-10 w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 ${isUltraviolet ? 'rounded-full border-2 border-[#d946ef]/60 shadow-[0_0_35px_rgba(217,70,239,0.35)]' : 'rounded-2xl border border-white/25'} bg-[#282828] flex items-center justify-center flex-shrink-0 shadow-2xl`}>
-            <Music size={64} className="text-[#757575]" />
-          </div>
-        )}
+          )}
+        </div>
 
-        <div className="relative z-10 flex flex-col gap-1.5 sm:gap-2 min-w-0 items-center sm:items-start text-center sm:text-left">
+        <div
+          style={{ '--stagger-i': 1 } as React.CSSProperties}
+          className="relative z-10 flex flex-col gap-1.5 sm:gap-2 min-w-0 items-center sm:items-start text-center sm:text-left anim-stagger-item"
+        >
           <span
             className={`text-[10px] uppercase font-black tracking-wider px-2.5 py-1 rounded-full w-max ${
               isSpatialGlass
@@ -247,7 +259,10 @@ export const PlaylistRoute: React.FC<PlaylistRouteProps> = ({ playlist, onSelect
       </div>
 
       {/* Playlist Action Bar */}
-      <div className="p-6 pt-4 flex items-center gap-4 sm:gap-6 flex-wrap">
+      <div
+        style={{ '--stagger-i': 2 } as React.CSSProperties}
+        className="p-6 pt-4 flex items-center gap-4 sm:gap-6 flex-wrap anim-stagger-item"
+      >
         {isUltraviolet ? (
           <>
             {/* Dual Action Buttons from Mockup Screen 3 */}
@@ -574,6 +589,7 @@ export const PlaylistRoute: React.FC<PlaylistRouteProps> = ({ playlist, onSelect
       {/* Tracks Table */}
       <div className="px-4 sm:px-6 pb-32 md:pb-12">
         <PlaylistTrackTable
+          key={playlist.id}
           tracks={playlist.tracks}
           onRemoveTrack={
             isCustom

@@ -28,6 +28,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { usePlayContextItem } from '../../hooks/usePlayContextItem';
+import { captureTransitionOrigin } from '../../utils/motion';
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { apiUrl } from '../../config/api';
@@ -479,16 +480,17 @@ export const SearchRoute: React.FC<SearchRouteProps> = ({ onSelectPlaylist }) =>
             Browse all
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
-            {GENRE_CARDS.map((genre) => (
+            {GENRE_CARDS.map((genre, idx) => (
               <div
                 key={genre.id}
                 style={{
+                  '--stagger-i': Math.min(idx, 10),
                   backgroundColor: genre.color,
                   boxShadow:
                     'inset 0 1.5px 1.5px rgba(255,255,255,0.45), 0 14px 28px -8px rgba(0,0,0,0.45)',
-                }}
+                } as React.CSSProperties}
                 onClick={() => setSearchTerm(genre.title)}
-                className="group relative h-40 rounded-[20px] p-4 overflow-hidden cursor-pointer border border-white/25 hover:scale-[1.03] transition-all duration-200 select-none"
+                className="group relative h-40 rounded-[20px] p-4 overflow-hidden cursor-pointer border border-white/25 hover:scale-[1.03] transition-all duration-200 select-none anim-stagger-item"
               >
                 <div
                   aria-hidden="true"
@@ -511,25 +513,46 @@ export const SearchRoute: React.FC<SearchRouteProps> = ({ onSelectPlaylist }) =>
           </div>
         </div>
       ) : isLoading && !hasAnyResults ? (
-        <div
-          className={`flex flex-col items-center justify-center py-20 ${
-            isFrost ? 'text-slate-600' : 'text-[#b3b3b3]'
-          }`}
-        >
-          <Loader2
-            size={32}
-            className={`animate-spin mb-3 ${isFrost ? 'text-sky-600' : 'text-[#1db954]'}`}
-          />
-          <p className="text-sm font-medium">Searching songs, artists, playlists & podcasts...</p>
+        <div className="space-y-6 py-4" aria-label="Searching catalog">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_2fr] gap-6">
+            <div
+              className={`h-48 rounded-[24px] border anim-shimmer ${
+                isFrost ? 'bg-slate-200/70 border-slate-300/60' : 'bg-white/[0.06] border-white/10'
+              }`}
+            />
+            <div className="space-y-2.5">
+              {[0, 1, 2, 3].map((row) => (
+                <div
+                  key={row}
+                  className={`h-14 rounded-2xl border anim-shimmer ${
+                    isFrost ? 'bg-slate-200/70 border-slate-300/60' : 'bg-white/[0.06] border-white/10'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {[0, 1, 2, 3, 4].map((card) => (
+              <div
+                key={card}
+                className={`h-44 rounded-[20px] border anim-shimmer ${
+                  isFrost ? 'bg-slate-200/70 border-slate-300/60' : 'bg-white/[0.06] border-white/10'
+                }`}
+              />
+            ))}
+          </div>
         </div>
       ) : activeCategoryHasResults ? (
-        <div className="space-y-8">
+        <div key={`${debouncedTerm}:${activeCategory}`} className="space-y-8">
           {/* ALL VIEW */}
           {activeCategory === 'all' && (
             <>
               {/* Top Result Card + Top 4 Songs */}
               {(promoteArtistTopResult || topSongResult) && (
-                <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_2fr] gap-6">
+                <div
+                  style={{ '--stagger-i': 0 } as React.CSSProperties}
+                  className="grid grid-cols-1 lg:grid-cols-[1.5fr_2fr] gap-6 anim-stagger-item"
+                >
                   {promoteArtistTopResult && topArtistMix ? (
                     <TopArtistPlaylistCard
                       playlist={topArtistMix}
@@ -569,7 +592,7 @@ export const SearchRoute: React.FC<SearchRouteProps> = ({ onSelectPlaylist }) =>
 
               {/* Playlists & Artist Mixes Shelf */}
               {matchedPlaylists.length > 0 && (
-                <section>
+                <section style={{ '--stagger-i': 1 } as React.CSSProperties} className="anim-stagger-item">
                   <div className="flex items-center justify-between mb-3">
                     <h2
                       className={`text-xl font-black font-sans tracking-tight ${
@@ -603,7 +626,7 @@ export const SearchRoute: React.FC<SearchRouteProps> = ({ onSelectPlaylist }) =>
 
               {/* Artists Shelf */}
               {matchedArtists.length > 0 && (
-                <section>
+                <section style={{ '--stagger-i': 2 } as React.CSSProperties} className="anim-stagger-item">
                   <div className="flex items-center justify-between mb-3">
                     <h2
                       className={`text-xl font-black font-sans tracking-tight ${
@@ -638,7 +661,7 @@ export const SearchRoute: React.FC<SearchRouteProps> = ({ onSelectPlaylist }) =>
 
               {/* Albums Shelf */}
               {matchedAlbums.length > 0 && (
-                <section>
+                <section style={{ '--stagger-i': 3 } as React.CSSProperties} className="anim-stagger-item">
                   <div className="flex items-center justify-between mb-3">
                     <h2
                       className={`text-xl font-black font-sans tracking-tight ${
@@ -676,7 +699,7 @@ export const SearchRoute: React.FC<SearchRouteProps> = ({ onSelectPlaylist }) =>
 
               {/* Podcasts Shelf (only when podcast results match query cleanly) */}
               {matchedPodcasts.length > 0 && (
-                <section>
+                <section style={{ '--stagger-i': 4 } as React.CSSProperties} className="anim-stagger-item">
                   <div className="flex items-center justify-between mb-3">
                     <h2
                       className={`text-xl font-black font-sans tracking-tight ${
@@ -714,7 +737,7 @@ export const SearchRoute: React.FC<SearchRouteProps> = ({ onSelectPlaylist }) =>
 
               {/* Full Song Results Table */}
               {searchResults.length > 0 && (
-                <div>
+                <div style={{ '--stagger-i': 5 } as React.CSSProperties} className="anim-stagger-item">
                   <div className="flex items-center justify-between mb-3">
                     <h2
                       className={`text-xl font-black font-sans tracking-tight ${
@@ -901,7 +924,10 @@ const TopArtistPlaylistCard: React.FC<{
 
   return (
     <div
-      onClick={onOpen}
+      onClick={(e) => {
+        captureTransitionOrigin(e.currentTarget, playlist.images[0]?.url);
+        onOpen();
+      }}
       style={{
         backdropFilter: 'blur(10px) saturate(140%)',
         WebkitBackdropFilter: 'blur(10px) saturate(140%)',
@@ -1034,7 +1060,10 @@ const PlaylistSearchCard: React.FC<{ playlist: Playlist; onOpen: () => void }> =
 
   return (
     <div
-      onClick={onOpen}
+      onClick={(e) => {
+        captureTransitionOrigin(e.currentTarget, playlist.images[0]?.url);
+        onOpen();
+      }}
       style={{
         contain: 'layout paint',
         boxShadow: isFrost
@@ -1125,7 +1154,10 @@ const ArtistSearchCard: React.FC<{
 
   return (
     <div
-      onClick={onOpen}
+      onClick={(e) => {
+        captureTransitionOrigin(e.currentTarget, artist.image);
+        onOpen();
+      }}
       style={{
         contain: 'layout paint',
         boxShadow: isFrost
@@ -1209,7 +1241,10 @@ const CollectionSearchCard: React.FC<{
 
   return (
     <div
-      onClick={onOpen}
+      onClick={(e) => {
+        captureTransitionOrigin(e.currentTarget, image);
+        onOpen();
+      }}
       style={{
         contain: 'layout paint',
         boxShadow: isFrost

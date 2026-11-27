@@ -28,6 +28,7 @@ import {
 
 interface MobileNowPlayingProps {
   onClose: () => void;
+  isClosing?: boolean;
 }
 
 function formatDuration(ms: number): string {
@@ -156,7 +157,7 @@ const NowPlayingProgressBar: React.FC<{ seek: (ms: number) => void }> = React.me
   );
 });
 
-export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) => {
+export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose, isClosing = false }) => {
   const {
     currentTrack,
     isPlaying,
@@ -177,6 +178,32 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
   const { isLiked, toggleLike } = useLibrary();
   const { isLiquidGlass, isVelvetLime, isUltraviolet, isVelvetStyle, currentThemeDef } = useTheme();
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const swipeStartRef = useRef<{ y: number; t: number } | null>(null);
+
+  const handleSwipeStart = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    swipeStartRef.current = { y: e.clientY, t: performance.now() };
+  };
+
+  const handleSwipeMove = (e: React.PointerEvent) => {
+    if (!swipeStartRef.current) return;
+    const dy = Math.max(0, e.clientY - swipeStartRef.current.y);
+    if (dy > 6) setDragY(dy);
+  };
+
+  const handleSwipeEnd = () => {
+    if (!swipeStartRef.current) return;
+    const elapsed = Math.max(1, performance.now() - swipeStartRef.current.t);
+    const velocity = dragY / elapsed;
+    swipeStartRef.current = null;
+    if (dragY > 95 || velocity > 0.5) {
+      setDragY(0);
+      onClose();
+    } else {
+      setDragY(0);
+    }
+  };
 
   if (!currentTrack) return null;
 
@@ -186,16 +213,31 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
   // Cosmic Ultraviolet Layout (Matching Screen 1 "Now Playing" from Reference Image)
   if (isUltraviolet) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/80 md:backdrop-blur-2xl animate-in fade-in duration-200 select-none">
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/80 md:backdrop-blur-2xl select-none ${
+          isClosing ? 'anim-scrim-out' : 'anim-scrim-in'
+        }`}
+      >
         {/* Backdrop dismiss for desktop */}
         <div className="hidden md:block absolute inset-0 cursor-pointer" onClick={onClose} />
 
-        <div className="w-full md:max-w-md h-full md:h-[92vh] md:max-h-[820px] md:rounded-[36px] md:border md:border-white/20 glass-player shadow-[0_25px_60px_rgba(0,0,0,0.85)] flex flex-col justify-between p-6 relative overflow-hidden cosmic-now-playing-bg text-white z-10">
+        <div
+          style={dragY > 0 ? { transform: `translate3d(0, ${dragY}px, 0)`, transition: 'none' } : undefined}
+          className={`w-full md:max-w-md h-full md:h-[92vh] md:max-h-[820px] md:rounded-[36px] md:border md:border-white/20 glass-player shadow-[0_25px_60px_rgba(0,0,0,0.85)] flex flex-col justify-between p-6 relative overflow-hidden cosmic-now-playing-bg text-white z-10 ${
+            isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
+          }`}
+        >
           {/* Top Atmospheric Aura Radiance */}
           <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-[#7c3aed]/25 via-[#a855f7]/15 to-transparent pointer-events-none z-0" />
 
-          {/* Top Bar: Controls & Header */}
-          <div className="flex items-center justify-between pt-1 relative z-10">
+          {/* Top Bar: Controls & Header (Swipe-down to dismiss) */}
+          <div
+            onPointerDown={handleSwipeStart}
+            onPointerMove={handleSwipeMove}
+            onPointerUp={handleSwipeEnd}
+            onPointerCancel={handleSwipeEnd}
+            className="flex items-center justify-between pt-1 relative z-10 touch-none"
+          >
             <button
               onClick={onClose}
               className="frosted-circle-btn w-11 h-11 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform"
@@ -223,7 +265,10 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
           </div>
 
           {/* Center: Large Circular Vinyl Disc with Atmospheric Aura Glow */}
-          <div className="flex items-center justify-center my-auto py-2 relative z-10">
+          <div
+            style={{ '--stagger-i': 0 } as React.CSSProperties}
+            className="flex items-center justify-center my-auto py-2 relative z-10 anim-stagger-item"
+          >
             {/* Ambient radiant glow behind circular image */}
             <div className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-[#d946ef]/30 via-[#a855f7]/35 to-[#6366f1]/25 blur-3xl pointer-events-none z-0" />
 
@@ -240,7 +285,10 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
           </div>
 
           {/* Bottom Area: Track Title, Artist, Waveform Scrubber & Controls */}
-          <div className="flex flex-col gap-3 pb-1 relative z-10">
+          <div
+            style={{ '--stagger-i': 1 } as React.CSSProperties}
+            className="flex flex-col gap-3 pb-1 relative z-10 anim-stagger-item"
+          >
             {/* Title & Artist (Centered, bold) */}
             <div className="flex flex-col items-center text-center my-1">
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-sans truncate max-w-[90%] drop-shadow-md">
@@ -364,13 +412,16 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
 
   // Velvet & Spatial Liquid Glass Metaball Music Player (Full card + Dock + Scrubber)
   if (isVelvetStyle) {
-    return <VelvetMetaballFullPlayer onClose={onClose} />;
+    return <VelvetMetaballFullPlayer onClose={onClose} isClosing={isClosing} />;
   }
 
   // Classic Spotify & Liquid Glass Layouts
   return (
     <div
-      className={`fixed inset-0 z-50 md:hidden flex flex-col justify-between p-6 select-none overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-300 ${
+      style={dragY > 0 ? { transform: `translate3d(0, ${dragY}px, 0)`, transition: 'none' } : undefined}
+      className={`fixed inset-0 z-50 md:hidden flex flex-col justify-between p-6 select-none overflow-hidden ${
+        isClosing ? 'anim-player-sheet-out' : 'anim-player-sheet-in'
+      } ${
         isVelvetLime
           ? 'bg-[#0B0B12] text-white'
           : isLiquidGlass
@@ -402,7 +453,13 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
       )}
 
       {/* Top Bar: Controls & Header */}
-      <div className="flex items-center justify-between pt-2 relative z-10">
+      <div
+        onPointerDown={handleSwipeStart}
+        onPointerMove={handleSwipeMove}
+        onPointerUp={handleSwipeEnd}
+        onPointerCancel={handleSwipeEnd}
+        className="flex items-center justify-between pt-2 relative z-10 touch-none"
+      >
         {isVelvetLime ? (
           <button
             onClick={onClose}
@@ -450,7 +507,10 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
       </div>
 
       {/* Center: Large Album Art */}
-      <div className="flex items-center justify-center my-auto py-2 relative z-10">
+      <div
+        style={{ '--stagger-i': 0 } as React.CSSProperties}
+        className="flex items-center justify-center my-auto py-2 relative z-10 anim-stagger-item"
+      >
         {isVelvetLime && (
           <div className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-[#f97316]/30 via-[#D8B4FE]/25 to-[#D2F843]/20 blur-3xl pointer-events-none z-0" />
         )}
@@ -477,7 +537,10 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
       </div>
 
       {/* Bottom Area: Info, Scrubber & Controls */}
-      <div className="flex flex-col gap-3 pb-2 relative z-10">
+      <div
+        style={{ '--stagger-i': 1 } as React.CSSProperties}
+        className="flex flex-col gap-3 pb-2 relative z-10 anim-stagger-item"
+      >
         {isVelvetLime ? (
           <div className="flex flex-col items-center text-center">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-sans truncate max-w-[90%]">
