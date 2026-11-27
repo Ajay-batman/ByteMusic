@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext';
 import { useTheme } from '../../context/ThemeContext';
+import { captureTransitionOrigin } from '../../utils/motion';
 
 interface VelvetMetaballVolumeMiniPlayerProps {
   onOpenFullPlayer: () => void;
@@ -107,6 +108,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
   const satelliteBadgeRef = useRef<HTMLDivElement>(null);
   const volumePanelRef = useRef<HTMLDivElement>(null);
   const miniInfoRef = useRef<HTMLDivElement>(null);
+  const artworkDiscRef = useRef<HTMLDivElement>(null);
   const wakePhysicsRef = useRef<(() => void) | null>(null);
 
   const viscosity = 13;
@@ -658,13 +660,17 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
           {/* Primary Minimized Music Player Pill Content */}
           <div
             ref={primaryContentRef}
-            onClick={onOpenFullPlayer}
+            onClick={() => {
+              captureTransitionOrigin(artworkDiscRef.current, artworkUrl);
+              onOpenFullPlayer();
+            }}
             style={{ width: BASE_PILL_W, height: PILL_H }}
             className="relative rounded-full flex items-center px-2.5 sm:px-3 overflow-hidden cursor-pointer"
           >
             {/* Left: Spinning Spatial Album Disc + Play/Pause Button */}
             <div className="flex items-center gap-2 shrink-0 z-10">
               <div
+                ref={artworkDiscRef}
                 title="Open Liquid Glass Music Player"
                 className="relative w-10 h-10 rounded-full flex items-center justify-center shadow-inner bg-gradient-to-tr from-rose-400 via-amber-300 to-fuchsia-500 p-0.5 overflow-hidden"
               >

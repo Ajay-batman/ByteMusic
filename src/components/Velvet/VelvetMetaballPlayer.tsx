@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   SkipBack,
   Play,
@@ -23,6 +23,7 @@ import { mockTracks } from '../../data/mockSpotifyCatalog';
 import { AudioQuality, Track } from '../../types/spotify';
 import { LiquidGlassSlider } from '../Common/LiquidGlassSlider';
 import { DownloadButton } from '../Common/DownloadButton';
+import { consumeTransitionOrigin, runFlipCoverAnimation } from '../../utils/motion';
 
 function formatTimeSeconds(sec: number): string {
   const clamped = Math.max(0, Math.floor(sec));
@@ -126,6 +127,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
   const cardGlassRef = useRef<HTMLDivElement>(null);
   const cardContentRef = useRef<HTMLDivElement>(null);
   const discRef = useRef<HTMLDivElement>(null);
+  const discFlipRef = useRef<HTMLDivElement>(null);
   const vizBarsRef = useRef<(HTMLSpanElement | null)[]>([]);
 
   // Scrubber Metaball Refs
@@ -633,6 +635,12 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
   const [dragY, setDragY] = useState(0);
   const swipeStartRef = useRef<{ y: number; t: number } | null>(null);
 
+  useLayoutEffect(() => {
+    if (!currentTrack || isClosing) return;
+    const origin = consumeTransitionOrigin(currentTrack.album.images[0]?.url);
+    runFlipCoverAnimation(discFlipRef.current, origin);
+  }, [currentTrack?.id, isClosing]);
+
   const handleSwipeStart = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
     swipeStartRef.current = { y: e.clientY, t: performance.now() };
@@ -883,7 +891,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
             </div>
 
             {/* Glowing Spatial Vinyl Disc */}
-            <div className="relative flex items-center justify-center my-1">
+            <div ref={discFlipRef} className="relative flex items-center justify-center my-1">
               {/* Ambient Spectral Halo */}
               <div
                 style={{ backgroundColor: 'rgba(217, 70, 239, 0.38)' }}

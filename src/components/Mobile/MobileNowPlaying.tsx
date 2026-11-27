@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext';
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,6 +7,7 @@ import { DownloadButton } from '../Common/DownloadButton';
 import { AudioQuality } from '../../types/spotify';
 import { mockTracks } from '../../data/mockSpotifyCatalog';
 import { VelvetMetaballFullPlayer } from '../Velvet/VelvetMetaballPlayer';
+import { consumeTransitionOrigin, runFlipCoverAnimation } from '../../utils/motion';
 import {
   ChevronDown,
   ChevronLeft,
@@ -180,6 +181,13 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose, isC
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [dragY, setDragY] = useState(0);
   const swipeStartRef = useRef<{ y: number; t: number } | null>(null);
+  const artworkFlipRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!currentTrack || isVelvetStyle || isClosing) return;
+    const origin = consumeTransitionOrigin(currentTrack.album.images[0]?.url);
+    runFlipCoverAnimation(artworkFlipRef.current, origin);
+  }, [currentTrack?.id, isVelvetStyle, isClosing]);
 
   const handleSwipeStart = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -265,14 +273,11 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose, isC
           </div>
 
           {/* Center: Large Circular Vinyl Disc with Atmospheric Aura Glow */}
-          <div
-            style={{ '--stagger-i': 0 } as React.CSSProperties}
-            className="flex items-center justify-center my-auto py-2 relative z-10 anim-stagger-item"
-          >
+          <div className="flex items-center justify-center my-auto py-2 relative z-10">
             {/* Ambient radiant glow behind circular image */}
             <div className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-[#d946ef]/30 via-[#a855f7]/35 to-[#6366f1]/25 blur-3xl pointer-events-none z-0" />
 
-            <div className="relative z-10 group">
+            <div ref={artworkFlipRef} className="relative z-10 group">
               <img
                 src={albumCoverUrl}
                 alt={currentTrack.name}
@@ -508,8 +513,8 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose, isC
 
       {/* Center: Large Album Art */}
       <div
-        style={{ '--stagger-i': 0 } as React.CSSProperties}
-        className="flex items-center justify-center my-auto py-2 relative z-10 anim-stagger-item"
+        ref={artworkFlipRef}
+        className="flex items-center justify-center my-auto py-2 relative z-10"
       >
         {isVelvetLime && (
           <div className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-[#f97316]/30 via-[#D8B4FE]/25 to-[#D2F843]/20 blur-3xl pointer-events-none z-0" />

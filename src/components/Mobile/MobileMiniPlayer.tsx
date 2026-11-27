@@ -3,6 +3,7 @@ import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext'
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { VelvetMetaballVolumeMiniPlayer } from '../Velvet/VelvetMetaballVolumeMiniPlayer';
+import { captureTransitionOrigin } from '../../utils/motion';
 import { Play, Pause, Heart, Loader2 } from 'lucide-react';
 
 interface MobileMiniPlayerProps {
@@ -58,7 +59,10 @@ export const MobileMiniPlayer: React.FC<MobileMiniPlayerProps> = ({ onOpenFullPl
 
   return (
     <div
-      onClick={onOpenFullPlayer}
+      onClick={(e) => {
+        captureTransitionOrigin(e.currentTarget, currentTrack.album.images[0]?.url);
+        onOpenFullPlayer();
+      }}
       style={{ bottom: 'calc(82px + var(--safe-bottom, 0px))' }}
       className={`fixed z-40 md:hidden flex items-center justify-between px-3.5 cursor-pointer select-none shadow-2xl transition-colors anim-mini-enter ${
         isUltraviolet
