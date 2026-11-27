@@ -7,6 +7,55 @@ export interface TransitionOrigin {
 }
 
 let pendingOrigin: TransitionOrigin | null = null;
+let miniPlayerArtworkEl: HTMLElement | null = null;
+
+/**
+ * Registers the mini-player's left artwork element so closing the full player
+ * can run a reverse shared-element FLIP back into it.
+ */
+export function registerMiniPlayerArtwork(el: HTMLElement | null): void {
+  miniPlayerArtworkEl = el;
+}
+
+/**
+ * Runs a reverse GPU-composited FLIP animation from the full player artwork
+ * back into the mini-player's left artwork slot.
+ */
+export function runFlipToMiniPlayer(sourceEl: HTMLElement | null): void {
+  if (!sourceEl || !miniPlayerArtworkEl || typeof window === 'undefined') return;
+  try {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const src = sourceEl.getBoundingClientRect();
+    const dest = miniPlayerArtworkEl.getBoundingClientRect();
+    if (src.width <= 0 || src.height <= 0 || dest.width <= 0 || dest.height <= 0) return;
+
+    const dx = dest.left + dest.width / 2 - (src.left + src.width / 2);
+    // Account for the parent sheet's ~48px downward exit travel
+    const dy = dest.top + dest.height / 2 - (src.top + src.height / 2) - 44;
+    const sx = Math.max(0.15, Math.min(1.5, dest.width / src.width));
+    const sy = Math.max(0.15, Math.min(1.5, dest.height / src.height));
+
+    sourceEl.animate(
+      [
+        {
+          transform: 'translate3d(0, 0, 0) scale(1, 1)',
+          opacity: 1,
+        },
+        {
+          transform: `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`,
+          opacity: 0.7,
+        },
+      ],
+      {
+        duration: 245,
+        easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
+        fill: 'forwards',
+      }
+    );
+  } catch {
+    // Graceful no-op
+  }
+}
 
 /**
  * Captures the bounding rectangle of the clicked album/playlist artwork (or card)

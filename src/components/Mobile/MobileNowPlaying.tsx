@@ -7,7 +7,7 @@ import { DownloadButton } from '../Common/DownloadButton';
 import { AudioQuality } from '../../types/spotify';
 import { mockTracks } from '../../data/mockSpotifyCatalog';
 import { VelvetMetaballFullPlayer } from '../Velvet/VelvetMetaballPlayer';
-import { consumeTransitionOrigin, runFlipCoverAnimation } from '../../utils/motion';
+import { consumeTransitionOrigin, runFlipCoverAnimation, runFlipToMiniPlayer } from '../../utils/motion';
 import {
   ChevronDown,
   ChevronLeft,
@@ -184,7 +184,11 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose, isC
   const artworkFlipRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!currentTrack || isVelvetStyle || isClosing) return;
+    if (!currentTrack || isVelvetStyle) return;
+    if (isClosing) {
+      runFlipToMiniPlayer(artworkFlipRef.current);
+      return;
+    }
     const origin = consumeTransitionOrigin(currentTrack.album.images[0]?.url);
     runFlipCoverAnimation(artworkFlipRef.current, origin);
   }, [currentTrack?.id, isVelvetStyle, isClosing]);

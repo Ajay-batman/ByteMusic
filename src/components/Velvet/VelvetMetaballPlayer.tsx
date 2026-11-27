@@ -23,7 +23,7 @@ import { mockTracks } from '../../data/mockSpotifyCatalog';
 import { AudioQuality, Track } from '../../types/spotify';
 import { LiquidGlassSlider } from '../Common/LiquidGlassSlider';
 import { DownloadButton } from '../Common/DownloadButton';
-import { consumeTransitionOrigin, runFlipCoverAnimation } from '../../utils/motion';
+import { consumeTransitionOrigin, runFlipCoverAnimation, runFlipToMiniPlayer } from '../../utils/motion';
 
 function formatTimeSeconds(sec: number): string {
   const clamped = Math.max(0, Math.floor(sec));
@@ -636,7 +636,11 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
   const swipeStartRef = useRef<{ y: number; t: number } | null>(null);
 
   useLayoutEffect(() => {
-    if (!currentTrack || isClosing) return;
+    if (!currentTrack) return;
+    if (isClosing) {
+      runFlipToMiniPlayer(discFlipRef.current);
+      return;
+    }
     const origin = consumeTransitionOrigin(currentTrack.album.images[0]?.url);
     runFlipCoverAnimation(discFlipRef.current, origin);
   }, [currentTrack?.id, isClosing]);

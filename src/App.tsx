@@ -64,10 +64,44 @@ const AppContent: React.FC = () => {
     setCurrentView(nextView);
   }, []);
 
-  const openMobilePlayer = useCallback(() => setPlayerStage('open'), []);
+  const openMobilePlayer = useCallback(() => {
+    setPlayerStage('open');
+    if (typeof window !== 'undefined' && !window.history.state?.byteMusicPlayer) {
+      window.history.pushState({ byteMusicPlayer: true }, '');
+    }
+  }, []);
+
   const closeMobilePlayer = useCallback(() => {
     setPlayerStage((prev) => (prev === 'open' ? 'closing' : prev));
   }, []);
+
+  useEffect(() => {
+    if (playerStage !== 'open') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Backspace' && e.key !== 'Escape') return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      closeMobilePlayer();
+    };
+    const onPopState = () => {
+      closeMobilePlayer();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [playerStage, closeMobilePlayer]);
 
   const selectedPlaylist =
     getPlaylistById(selectedPlaylistId) ||
