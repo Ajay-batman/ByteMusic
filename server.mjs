@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Ytdl, Client } from '@distube/ytdl-core';
+import { handleDynamicCatalogRoute } from './server/dynamicCatalog.mjs';
+import { handleVideoDownloaderRoute } from './server/videoDownloaderRoute.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +83,16 @@ const server = http.createServer(async (req, res) => {
       });
       return;
     }
+  }
+
+  // API: Standalone YouTube Downloader Routes
+  if (await handleVideoDownloaderRoute(req, res, url.pathname, url)) {
+    return;
+  }
+
+  // API: Dynamic Charts, Discover Weekly & Recommendations
+  if (await handleDynamicCatalogRoute(req, res, url.pathname, url)) {
+    return;
   }
 
   // API: /api/resolve-yt

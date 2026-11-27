@@ -30,7 +30,7 @@ export const LiquidGlassSlider: React.FC<LiquidGlassSliderProps> = ({
   className = '',
   accentColor,
 }) => {
-  const { isLiquidGlass, isVelvetLime, currentThemeDef } = useTheme();
+  const { isLiquidGlass, isVelvetLime, isUltraviolet, currentThemeDef } = useTheme();
   const effectiveAccent = accentColor || currentThemeDef?.accentColor || '#30d158';
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -81,6 +81,41 @@ export const LiquidGlassSlider: React.FC<LiquidGlassSliderProps> = ({
       (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
     } catch {}
   };
+
+  // If in Cosmic Ultraviolet theme, render glowing neon magenta/violet slider with glowing light glass thumb
+  if (isUltraviolet) {
+    return (
+      <div
+        ref={trackRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`group relative flex items-center h-5 cursor-pointer select-none touch-none ${className}`}
+      >
+        <div className="w-full h-1.5 bg-white/15 rounded-full relative overflow-hidden backdrop-blur-sm border border-white/10 transition-all shadow-[inset_0_1px_1px_rgba(0,0,0,0.5)]">
+          <div
+            style={{
+              width: `${activePercent}%`,
+              background: 'linear-gradient(90deg, #a855f7 0%, #d946ef 100%)',
+            }}
+            className="h-full rounded-full transition-all shadow-[0_0_14px_rgba(217,70,239,0.85)]"
+          />
+        </div>
+        {/* Glowing Luminous Glass Thumb circle */}
+        <div
+          style={{
+            left: `${activePercent}%`,
+            background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #e879f9 60%, #d946ef 100%)',
+          }}
+          className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full shadow-[0_0_16px_rgba(217,70,239,1),0_0_6px_#ffffff] border border-white/80 pointer-events-none transition-transform ${
+            isDragging || isHovered ? 'w-4.5 h-4.5 scale-125' : 'w-3.5 h-3.5'
+          }`}
+        />
+      </div>
+    );
+  }
 
   // If in Velvet & Lime theme, render sleek electric lime slider with glowing thumb
   if (isVelvetLime) {

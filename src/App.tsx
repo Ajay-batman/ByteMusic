@@ -8,14 +8,17 @@ import { HomeRoute } from './components/Home/HomeRoute';
 import { BottomPlayerBar } from './components/Player/BottomPlayerBar';
 import { MobileBottomNav } from './components/Mobile/MobileBottomNav';
 import { MobileMiniPlayer } from './components/Mobile/MobileMiniPlayer';
+import { VelvetMetaballNav } from './components/Velvet/VelvetMetaballNav';
 import { ThemePickerModal } from './components/Common/ThemePickerModal';
-import { Playlist } from './types/spotify';
+import { AppView, Playlist } from './types/spotify';
 import { Loader2 } from 'lucide-react';
 
 // Route code splitting for faster startup & reduced initial JS parse time
 const SearchRoute = lazy(() => import('./components/Search/SearchRoute').then((m) => ({ default: m.SearchRoute })));
 const PlaylistRoute = lazy(() => import('./components/Playlist/PlaylistRoute').then((m) => ({ default: m.PlaylistRoute })));
 const LibraryRoute = lazy(() => import('./components/Library/LibraryRoute').then((m) => ({ default: m.LibraryRoute })));
+const AboutRoute = lazy(() => import('./components/About/AboutRoute').then((m) => ({ default: m.AboutRoute })));
+const DownloaderRoute = lazy(() => import('./components/Downloader/DownloaderRoute').then((m) => ({ default: m.DownloaderRoute })));
 const MobileNowPlaying = lazy(() => import('./components/Mobile/MobileNowPlaying').then((m) => ({ default: m.MobileNowPlaying })));
 
 const RouteLoadingFallback: React.FC = () => (
@@ -26,15 +29,30 @@ const RouteLoadingFallback: React.FC = () => (
 );
 
 const AppContent: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'home' | 'search' | 'library' | 'playlist'>('home');
+  const [currentView, setCurrentView] = useState<AppView>('home');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('playlist-today-top-hits');
+  const [transientPlaylist, setTransientPlaylist] = useState<Playlist | null>(null);
+  const [playlistOrigin, setPlaylistOrigin] = useState<'home' | 'search' | 'library'>('library');
   const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
   const { allPlaylists, getPlaylistById } = useLibrary();
-  const { theme, isLiquidGlass, isVelvetLime } = useTheme();
+  const { theme, isLiquidGlass, isVelvetLime, isUltraviolet, isGlacialGlass, isVelvetStyle } = useTheme();
 
-  const selectedPlaylist = getPlaylistById(selectedPlaylistId) || allPlaylists[0];
+  const selectedPlaylist =
+    getPlaylistById(selectedPlaylistId) ||
+    (transientPlaylist?.id === selectedPlaylistId ? transientPlaylist : undefined) ||
+    allPlaylists[0];
 
-  const handleSelectPlaylist = (playlist: Playlist) => {
+  const handleSelectPlaylist = (playlist: Playlist, origin?: 'home' | 'search' | 'library') => {
+    if (!getPlaylistById(playlist.id)) {
+      setTransientPlaylist(playlist);
+    } else {
+      setTransientPlaylist(null);
+    }
+    const fallbackOrigin: 'home' | 'search' | 'library' =
+      currentView === 'search' || currentView === 'home' || currentView === 'library'
+        ? currentView
+        : playlistOrigin;
+    setPlaylistOrigin(origin || fallbackOrigin);
     setSelectedPlaylistId(playlist.id);
     setCurrentView('playlist');
   };
@@ -44,12 +62,20 @@ const AppContent: React.FC = () => {
       ? 'liquid-glass-bg text-white'
       : theme === 'velvet-lime'
       ? 'velvet-lime-bg text-white'
+      : theme === 'cosmic-ultraviolet'
+      ? 'cosmic-ultraviolet-bg text-white'
+      : theme === 'glacial-glass'
+      ? 'glacial-glass-bg text-slate-800'
       : theme === 'cyberpunk'
       ? 'cyberpunk-bg text-white'
       : theme === 'amoled'
       ? 'amoled-bg text-white'
       : theme === 'aurora'
       ? 'aurora-bg text-white'
+      : theme === 'sunset'
+      ? 'sunset-bg text-white'
+      : theme === 'frost'
+      ? 'frost-bg text-slate-900'
       : 'bg-black text-white';
 
   return (
@@ -71,22 +97,38 @@ const AppContent: React.FC = () => {
         {/* Center Main Stage */}
         <main
           className={`flex-1 rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 pb-32 md:pb-0 ${
-            isVelvetLime
+            isVelvetStyle || isUltraviolet || isGlacialGlass
               ? 'bg-transparent'
               : isLiquidGlass
               ? 'glass-panel'
               : 'bg-[#121212] rounded-lg'
           }`}
         >
+          {/* Velvet & Spatial Responsive Desktop Navigation Bar */}
+          {isVelvetStyle && (
+            <div className="hidden md:flex justify-center pt-3.5 pb-1.5 px-4 flex-shrink-0 z-30 pointer-events-none">
+              <VelvetMetaballNav currentView={currentView} setCurrentView={setCurrentView} />
+            </div>
+          )}
+
           <Suspense fallback={<RouteLoadingFallback />}>
-            {currentView === 'home' && <HomeRoute onSelectPlaylist={handleSelectPlaylist} />}
-            {currentView === 'search' && <SearchRoute />}
-            {currentView === 'library' && <LibraryRoute onSelectPlaylist={handleSelectPlaylist} />}
+            {currentView === 'home' && (
+              <HomeRoute
+                onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'home')}
+                onOpenAbout={() => setCurrentView('about')}
+                onOpenDownloader={() => setCurrentView('downloader')}
+              />
+            )}
+            {currentView === 'search' && <SearchRoute onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'search')} />}
+            {currentView === 'library' && <LibraryRoute onSelectPlaylist={(pl) => handleSelectPlaylist(pl, 'library')} />}
+            {currentView === 'about' && <AboutRoute onBack={() => setCurrentView('home')} />}
+            {currentView === 'downloader' && <DownloaderRoute onBack={() => setCurrentView('home')} />}
             {currentView === 'playlist' && selectedPlaylist && (
               <PlaylistRoute
                 playlist={selectedPlaylist}
-                onSelectPlaylist={handleSelectPlaylist}
-                onBack={() => setCurrentView('library')}
+                onSelectPlaylist={(pl) => handleSelectPlaylist(pl)}
+                backLabel={playlistOrigin === 'search' ? 'Search' : playlistOrigin === 'home' ? 'Home' : 'Library'}
+                onBack={() => setCurrentView(playlistOrigin)}
               />
             )}
           </Suspense>
@@ -95,7 +137,7 @@ const AppContent: React.FC = () => {
 
       {/* Desktop Bottom Playback Controller (Hidden on mobile) */}
       <div className="hidden md:block z-20">
-        <BottomPlayerBar />
+        <BottomPlayerBar onOpenNowPlaying={() => setIsMobilePlayerOpen(true)} />
       </div>
 
       {/* Mobile Mini Player & Bottom Navigation (Visible only on mobile) */}

@@ -1,6 +1,8 @@
 node_modules
 dist
 data/library.json
+data/about.json
+data/.tmp-dl
 evidence.json
 .DS_Store
 *.local

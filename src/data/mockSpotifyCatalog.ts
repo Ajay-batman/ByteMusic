@@ -25,10 +25,79 @@ export const mockArtists: Record<string, Artist> = {
     id: 'artist-sabrina-carpenter',
     name: 'Sabrina Carpenter',
     uri: 'spotify:artist:74KM79TiuVKeVCqs8QtB0B'
+  },
+  ellieGoulding: {
+    id: 'artist-ellie-goulding',
+    name: 'Ellie Goulding',
+    uri: 'spotify:artist:0X2BH1fck6amBIo2FKmm9J'
+  },
+  oliviaRodrigo: {
+    id: 'artist-olivia-rodrigo',
+    name: 'Olivia Rodrigo',
+    uri: 'spotify:artist:1McMsnEElThX1knmY4laGg'
+  },
+  travisScott: {
+    id: 'artist-travis-scott',
+    name: 'Travis Scott',
+    uri: 'spotify:artist:0Y5tJX1MQlPlqiwlOH1tJY'
   }
 };
 
 export const mockAlbums: Record<string, Album> = {
+  rodeo: {
+    id: 'album-rodeo',
+    name: 'Rodeo',
+    uri: 'spotify:album:4PWBTB6NYSKQwfo79I3prg',
+    releaseDate: '2015-09-04',
+    images: [
+      { url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=500&h=500&fit=crop', width: 500, height: 500 }
+    ]
+  },
+  hateMeAlbum: {
+    id: 'album-hate-me',
+    name: 'Hate Me',
+    uri: 'spotify:album:0Wc5hA3tUcmmU41aUfD2s9',
+    releaseDate: '2019-06-26',
+    images: [
+      { url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&h=500&fit=crop', width: 500, height: 500 }
+    ]
+  },
+  guts: {
+    id: 'album-guts',
+    name: 'GUTS',
+    uri: 'spotify:album:1xJHno7SxDHiixCrQUx9g1',
+    releaseDate: '2023-09-08',
+    images: [
+      { url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop', width: 500, height: 500 }
+    ]
+  },
+  soulSootherAlbum: {
+    id: 'album-soul-soother',
+    name: 'Soul Soother',
+    uri: 'spotify:album:soul-soother-ambient',
+    releaseDate: '2024-01-01',
+    images: [
+      { url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&h=500&fit=crop', width: 500, height: 500 }
+    ]
+  },
+  aestheticVibesAlbum: {
+    id: 'album-aesthetic-vibes',
+    name: 'Aesthetic Vibes',
+    uri: 'spotify:album:aesthetic-vibes-sunset',
+    releaseDate: '2024-02-14',
+    images: [
+      { url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=500&h=500&fit=crop', width: 500, height: 500 }
+    ]
+  },
+  auraOfPeaceAlbum: {
+    id: 'album-aura-of-peace',
+    name: 'Aura of Peace',
+    uri: 'spotify:album:aura-of-peace-golden',
+    releaseDate: '2024-03-20',
+    images: [
+      { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&h=500&fit=crop', width: 500, height: 500 }
+    ]
+  },
   randomAccessMemories: {
     id: 'album-ram',
     name: 'Random Access Memories',
@@ -176,10 +245,135 @@ export const mockTracks: Track[] = [
     youtubeId: 'dvgZkm1xWPE', // Official Full Song (4:02)
     addedAt: '1 week ago',
     bpm: 138
+  },
+  {
+    id: 'track-hate-me',
+    uri: 'spotify:track:hate-me-ellie',
+    name: 'HATE ME',
+    duration: { milliseconds: 186000 },
+    artists: [mockArtists.ellieGoulding],
+    album: mockAlbums.hateMeAlbum,
+    isPlayable: true,
+    isExplicit: false,
+    youtubeId: 'CF_STqCq5_w',
+    addedAt: '2 days ago',
+    bpm: 102
+  },
+  {
+    id: 'track-pray-4-love',
+    uri: 'spotify:track:pray-4-love-weeknd',
+    name: 'Pray 4 Love',
+    duration: { milliseconds: 178000 },
+    artists: [mockArtists.theWeeknd, mockArtists.travisScott],
+    album: mockAlbums.rodeo,
+    isPlayable: true,
+    isExplicit: true,
+    youtubeId: '5V3Z950eG8A',
+    addedAt: 'Just now',
+    bpm: 124
+  },
+  {
+    id: 'track-vampire',
+    uri: 'spotify:track:vampire-olivia',
+    name: 'Vampire',
+    duration: { milliseconds: 219000 },
+    artists: [mockArtists.oliviaRodrigo],
+    album: mockAlbums.guts,
+    isPlayable: true,
+    isExplicit: true,
+    youtubeId: 'Zl97nB5n_F4',
+    addedAt: 'Yesterday',
+    bpm: 138
+  },
+  {
+    id: 'track-soul-soother',
+    uri: 'spotify:track:soul-soother-track',
+    name: 'Soul Soother',
+    duration: { milliseconds: 228000 },
+    artists: [mockArtists.theWeeknd],
+    album: mockAlbums.soulSootherAlbum,
+    isPlayable: true,
+    isExplicit: false,
+    youtubeId: '4NRXx6U8ABQ',
+    addedAt: '3 days ago',
+    bpm: 96
+  },
+  {
+    id: 'track-aesthetic-vibes',
+    uri: 'spotify:track:aesthetic-vibes-track',
+    name: 'Aesthetic Vibes',
+    duration: { milliseconds: 210000 },
+    artists: [mockArtists.ellieGoulding],
+    album: mockAlbums.aestheticVibesAlbum,
+    isPlayable: true,
+    isExplicit: false,
+    youtubeId: 'CF_STqCq5_w',
+    addedAt: '5 days ago',
+    bpm: 110
+  },
+  {
+    id: 'track-aura-of-peace',
+    uri: 'spotify:track:aura-of-peace-track',
+    name: 'Aura of Peace',
+    duration: { milliseconds: 198000 },
+    artists: [mockArtists.oliviaRodrigo],
+    album: mockAlbums.auraOfPeaceAlbum,
+    isPlayable: true,
+    isExplicit: false,
+    youtubeId: 'Zl97nB5n_F4',
+    addedAt: '4 days ago',
+    bpm: 88
   }
 ];
 
 export const mockPlaylists: Playlist[] = [
+  {
+    id: 'playlist-soul-soother',
+    uri: 'spotify:playlist:soul-soother-curated',
+    name: 'Soul Soother',
+    description: 'Serene ambient ocean waves, tranquil piano, and deep meditative calm.',
+    owner: { id: 'spotify', displayName: 'Glacial Curation' },
+    images: mockAlbums.soulSootherAlbum.images,
+    tracks: [
+      mockTracks[8], // Pray 4 Love
+      mockTracks[7], // HATE ME
+      mockTracks[9], // Vampire
+      mockTracks[10], // Soul Soother
+      mockTracks[1], // Blinding Lights
+      mockTracks[3], // BIRDS OF A FEATHER
+    ]
+  },
+  {
+    id: 'playlist-aesthetic-vibes',
+    uri: 'spotify:playlist:aesthetic-vibes-curated',
+    name: 'Aesthetic Vibes',
+    description: 'Warm sunset blush, lo-fi chillout, and mellow evening grooves.',
+    owner: { id: 'spotify', displayName: 'Glacial Curation' },
+    images: mockAlbums.aestheticVibesAlbum.images,
+    tracks: [
+      mockTracks[11], // Aesthetic Vibes
+      mockTracks[8], // Pray 4 Love
+      mockTracks[7], // HATE ME
+      mockTracks[9], // Vampire
+      mockTracks[0], // Get Lucky
+      mockTracks[5], // Espresso
+    ]
+  },
+  {
+    id: 'playlist-aura-of-peace',
+    uri: 'spotify:playlist:aura-of-peace-curated',
+    name: 'Aura of Peace',
+    description: 'Golden hour atmosphere, sacred calm, and soothing acoustic frequencies.',
+    owner: { id: 'spotify', displayName: 'Glacial Curation' },
+    images: mockAlbums.auraOfPeaceAlbum.images,
+    tracks: [
+      mockTracks[12], // Aura of Peace
+      mockTracks[8], // Pray 4 Love
+      mockTracks[10], // Soul Soother
+      mockTracks[2], // Starboy
+      mockTracks[6], // Viva La Vida
+    ]
+  },
   {
     id: 'playlist-today-top-hits',
     uri: 'spotify:playlist:37i9dQZF1DXcBWIGoYBM5M',

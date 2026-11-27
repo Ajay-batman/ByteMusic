@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { Track, AudioQuality } from '../types/spotify';
 import { mockTracks } from '../data/mockSpotifyCatalog';
 import { apiUrl } from '../config/api';
+import { resolveYouTubeVideoIdDirect, shouldPreferServerBackend } from '../services/catalogClient';
 
 declare global {
   interface Window {
@@ -155,6 +156,11 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       URL.revokeObjectURL(currentBlobUrlRef.current);
       currentBlobUrlRef.current = null;
     }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.removeAttribute('src');
+      audioRef.current.load();
+    }
   }, []);
 
   useEffect(() => {
@@ -192,34 +198,6 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
-  const resumeInternal = useCallback(() => {
-    userIntentPlayingRef.current = true;
-    if (audioRef.current && audioRef.current.src && audioRef.current.paused) {
-      audioRef.current.play().catch(() => {});
-      setIsPlaying(true);
-      return;
-    }
-    if (ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
-      try {
-        ytPlayerRef.current.playVideo();
-        setIsPlaying(true);
-      } catch {}
-    }
-  }, []);
-
-  const pauseInternal = useCallback(() => {
-    userIntentPlayingRef.current = false;
-    if (audioRef.current && !audioRef.current.paused) {
-      audioRef.current.pause();
-    }
-    if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
-      try {
-        ytPlayerRef.current.pauseVideo();
-      } catch {}
-    }
-    setIsPlaying(false);
-  }, []);
-
   // Master PlayTrack: Plays 100% FULL Song via YouTube IFrame Engine (or Offline Cache)
   const playTrackInternal = useCallback((track: Track, newQueue?: Track[]) => {
     const playRequestId = ++playRequestIdRef.current;
@@ -238,9 +216,6 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const startPlayback = (ytId: string) => {
       cleanupBlobUrl();
-      if (audioRef.current) {
-        audioRef.current.src = '';
-      }
       userIntentPlayingRef.current = true;
       if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
         ytPlayerRef.current.loadVideoById(ytId);
@@ -289,31 +264,122 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
 
-      // 3. Resolve via server /api/resolve-yt
+      // Direct audio fallback for podcast episodes or when YouTube backend resolver is unavailable
+      const fallbackAudioPlay = () => {
+        if (track.audioUrl && audioRef.current) {
+          cleanupBlobUrl();
+          userIntentPlayingRef.current = true;
+          audioRef.current.src = track.audioUrl;
+          audioRef.current.load();
+          audioRef.current
+            .play()
+            .then(() => {
+              if (playRequestId !== playRequestIdRef.current) return;
+              setIsPlaying(true);
+              setIsLoading(false);
+            })
+            .catch(() => {
+              if (playRequestId === playRequestIdRef.current) setIsLoading(false);
+            });
+          return true;
+        }
+        return false;
+      };
+
+      // Podcast episodes ship direct full-length audio URLs
+      if (track.id.startsWith('podcast-ep-') && fallbackAudioPlay()) {
+        return;
+      }
+
+      // 3. Resolve YouTube videoId: native CapacitorHttp directly on Android (serverless), or /api/resolve-yt on Desktop/custom server
       const query = `${track.name} ${artistName}`;
-      fetch(apiUrl(`/api/resolve-yt?q=${encodeURIComponent(query)}`))
-        .then((res) => res.json())
-        .then((data) => {
-          if (playRequestId !== playRequestIdRef.current) return;
-          if (data.videoId) {
-            try {
-              localStorage.setItem(cacheKey, data.videoId);
-            } catch {}
-            track.youtubeId = data.videoId;
-            if (currentTrackRef.current?.id === track.id) {
-              startPlayback(data.videoId);
+      (async () => {
+        try {
+          let videoId: string | null = null;
+          if (shouldPreferServerBackend()) {
+            const res = await fetch(apiUrl(`/api/resolve-yt?q=${encodeURIComponent(query)}`), {
+              signal: AbortSignal.timeout(5000),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              videoId = data?.videoId || null;
             }
           } else {
+            videoId = await resolveYouTubeVideoIdDirect(query);
+          }
+
+          if (playRequestId !== playRequestIdRef.current) return;
+          if (videoId) {
+            try {
+              localStorage.setItem(cacheKey, videoId);
+            } catch {}
+            track.youtubeId = videoId;
+            if (currentTrackRef.current?.id === track.id) {
+              startPlayback(videoId);
+            }
+          } else if (!fallbackAudioPlay()) {
             setIsLoading(false);
           }
-        })
-        .catch((err) => {
+        } catch (err) {
           if (playRequestId !== playRequestIdRef.current) return;
-          console.warn('Failed to resolve song ID:', err);
-          setIsLoading(false);
-        });
+          console.warn('Song resolver unavailable, checking direct audio fallback:', err);
+          if (!fallbackAudioPlay()) {
+            setIsLoading(false);
+          }
+        }
+      })();
     })();
   }, [cleanupBlobUrl]);
+
+  const resumeInternal = useCallback(() => {
+    userIntentPlayingRef.current = true;
+
+    // 1. Resume HTML5 Audio ONLY if an offline blob is actively loaded
+    if (currentBlobUrlRef.current && audioRef.current && audioRef.current.paused) {
+      audioRef.current.play().catch((err) => {
+        console.warn('Audio play error:', err);
+        setIsPlaying(false);
+        userIntentPlayingRef.current = false;
+      });
+      setIsPlaying(true);
+      return;
+    }
+
+    // 2. YouTube IFrame Engine
+    const ytState =
+      ytPlayerRef.current && typeof ytPlayerRef.current.getPlayerState === 'function'
+        ? ytPlayerRef.current.getPlayerState()
+        : null;
+
+    if (ytPlayerRef.current && (ytState === 1 || ytState === 2 || ytState === 3)) {
+      try {
+        ytPlayerRef.current.playVideo();
+        setIsPlaying(true);
+        return;
+      } catch {}
+    }
+
+    // 3. Fallback: If not in an active paused state or no video was loaded yet, reload the track cleanly
+    if (currentTrackRef.current) {
+      playTrackInternal(currentTrackRef.current);
+    }
+  }, [playTrackInternal]);
+
+  const pauseInternal = useCallback(() => {
+    playRequestIdRef.current++;
+    userIntentPlayingRef.current = false;
+    pendingVideoIdRef.current = null;
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+    }
+    if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
+      try {
+        ytPlayerRef.current.pauseVideo();
+      } catch {}
+    }
+    setIsLoading(false);
+    setIsPlaying(false);
+  }, []);
 
   const handleNextTrackInternal = useCallback(() => {
     const q = queueRef.current.length > 0 ? queueRef.current : mockTracks;
@@ -394,15 +460,25 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             onReady: (event: any) => {
               ytPlayerRef.current = event.target;
               isYtReadyRef.current = true;
-              if (pendingVideoIdRef.current) {
+              if (pendingVideoIdRef.current && userIntentPlayingRef.current) {
                 event.target.loadVideoById(pendingVideoIdRef.current);
                 event.target.playVideo();
+                pendingVideoIdRef.current = null;
+              } else {
                 pendingVideoIdRef.current = null;
               }
             },
             onStateChange: (event: any) => {
               if (event.data === 1) { // PLAYING
-                userIntentPlayingRef.current = true;
+                if (!userIntentPlayingRef.current) {
+                  // User paused while YT was still buffering — enforce pause immediately
+                  try {
+                    event.target?.pauseVideo?.();
+                  } catch {}
+                  setIsPlaying(false);
+                  setIsLoading(false);
+                  return;
+                }
                 setIsPlaying(true);
                 setIsLoading(false);
               } else if (event.data === 2) { // PAUSED
@@ -434,6 +510,8 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             onError: (err: any) => {
               console.warn('YouTube IFrame player error:', err);
               setIsLoading(false);
+              setIsPlaying(false);
+              userIntentPlayingRef.current = false;
             },
           },
         });
@@ -540,21 +618,27 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [currentTrack, isPlaying]);
 
   const togglePlay = useCallback(() => {
-    if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
+    const isBlobActive = Boolean(currentBlobUrlRef.current && audioRef.current && !audioRef.current.paused);
+    const isYtActive = Boolean(ytPlayerRef.current && ytPlayerRef.current.getPlayerState?.() === 1);
+    const currentlyPlaying = isPlaying || isBlobActive || isYtActive;
+
+    if (currentlyPlaying) {
       pauseInternal();
       return;
     }
-    if (audioRef.current && audioRef.current.src && audioRef.current.paused && audioRef.current.currentTime > 0) {
+
+    if (currentBlobUrlRef.current && audioRef.current && audioRef.current.paused) {
       resumeInternal();
       return;
     }
 
-    if (ytPlayerRef.current) {
-      if (isPlaying) {
-        pauseInternal();
-      } else {
-        resumeInternal();
-      }
+    const ytState =
+      ytPlayerRef.current && typeof ytPlayerRef.current.getPlayerState === 'function'
+        ? ytPlayerRef.current.getPlayerState()
+        : null;
+
+    if (ytPlayerRef.current && (ytState === 2 || ytState === 3 || ytState === 1)) {
+      resumeInternal();
     } else if (currentTrackRef.current) {
       playTrackInternal(currentTrackRef.current);
     }
@@ -661,6 +745,25 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAudioQualityState(quality);
   }, []);
 
+  // Wrapper for manual user Next click: emits early-skip signal if skipped within first 20s
+  const nextTrack = useCallback(() => {
+    const current = currentTrackRef.current;
+    if (current && isPlaying) {
+      let elapsedSec = 0;
+      if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
+        elapsedSec = audioRef.current.currentTime || 0;
+      } else if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
+        try {
+          elapsedSec = ytPlayerRef.current.getCurrentTime() || 0;
+        } catch {}
+      }
+      if (elapsedSec > 1 && elapsedSec < 20) {
+        window.dispatchEvent(new CustomEvent('bytemusic-track-skip', { detail: current }));
+      }
+    }
+    handleNextTrackInternal();
+  }, [isPlaying, handleNextTrackInternal]);
+
   // Memoized low-frequency playback context value
   const playbackContextValue = useMemo<PlaybackContextType>(
     () => ({
@@ -682,7 +785,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       toggleMute,
       toggleShuffle,
       toggleRepeat,
-      nextTrack: handleNextTrackInternal,
+      nextTrack,
       prevTrack: handlePrevTrackInternal,
     }),
     [
@@ -704,7 +807,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       toggleMute,
       toggleShuffle,
       toggleRepeat,
-      handleNextTrackInternal,
+      nextTrack,
       handlePrevTrackInternal,
     ]
   );

@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { handleDynamicCatalogRoute } from './server/dynamicCatalog.mjs';
+import { handleVideoDownloaderRoute } from './server/videoDownloaderRoute.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,6 +57,19 @@ export default defineConfig({
             });
             return;
           }
+        });
+
+        // Dynamic Charts, Discover Weekly & Personalized Recommendations + Video Downloader API
+        server.middlewares.use(async (req, res, next) => {
+          try {
+            const parsedUrl = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+            if (await handleVideoDownloaderRoute(req, res, parsedUrl.pathname, parsedUrl)) return;
+            const handled = await handleDynamicCatalogRoute(req, res, parsedUrl.pathname, parsedUrl);
+            if (handled) return;
+          } catch (err) {
+            console.error('Dynamic catalog middleware error:', err);
+          }
+          next();
         });
 
         // Spotube/ViMusic Internal YouTube Audio Resolver

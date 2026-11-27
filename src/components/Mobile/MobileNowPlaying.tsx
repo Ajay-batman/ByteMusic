@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext';
 import { useLibrary } from '../../context/LibraryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { LiquidGlassSlider } from '../Common/LiquidGlassSlider';
 import { DownloadButton } from '../Common/DownloadButton';
 import { AudioQuality } from '../../types/spotify';
+import { mockTracks } from '../../data/mockSpotifyCatalog';
+import { GlacialRadialArcScrubber } from '../Glacial/GlacialGlassShowcase';
+import { VelvetMetaballFullPlayer } from '../Velvet/VelvetMetaballPlayer';
 import {
   ChevronDown,
   ChevronLeft,
@@ -21,6 +24,7 @@ import {
   Loader2,
   MoreVertical,
   ListMusic,
+  X,
 } from 'lucide-react';
 
 interface MobileNowPlayingProps {
@@ -35,9 +39,98 @@ function formatDuration(ms: number): string {
 }
 
 /**
- * Isolated Scrubber Slider for Mobile Now Playing Screen.
- * Subscribes to usePlaybackProgress() so ONLY the slider and time labels re-render every 250ms,
- * preserving 60fps animations and avoiding image re-render jank.
+ * Screen 1 Audio Waveform Visualizer Scrubber.
+ * Features ~40 dynamic vertical bars matching the uploaded design reference.
+ * Played bars shine solid glowing white; unplayed bars are translucent frosted white.
+ */
+const WAVEFORM_HEIGHTS = [
+  12, 16, 22, 16, 26, 36, 22, 16, 30, 42, 34, 18, 24, 34, 46, 30, 20, 16, 24, 38,
+  44, 28, 20, 32, 42, 26, 18, 28, 42, 36, 20, 26, 38, 20, 16, 12, 20, 30, 22, 14
+];
+
+const WaveformAudioScrubber: React.FC<{ seek: (ms: number) => void }> = React.memo(({ seek }) => {
+  const { progressMs, durationMs } = usePlaybackProgress();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPercent, setDragPercent] = useState<number | null>(null);
+
+  const currentPercent = durationMs > 0 ? (progressMs / durationMs) * 100 : 0;
+  const activePercent = isDragging && dragPercent !== null ? dragPercent : currentPercent;
+
+  const calculatePercent = useCallback((clientX: number) => {
+    if (!trackRef.current) return 0;
+    const rect = trackRef.current.getBoundingClientRect();
+    const raw = ((clientX - rect.left) / rect.width) * 100;
+    return Math.min(Math.max(raw, 0), 100);
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    const pct = calculatePercent(e.clientX);
+    setDragPercent(pct);
+    seek((pct / 100) * (durationMs || 1));
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const pct = calculatePercent(e.clientX);
+    setDragPercent(pct);
+    seek((pct / 100) * (durationMs || 1));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setDragPercent(null);
+    try {
+      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {}
+  };
+
+  const totalBars = WAVEFORM_HEIGHTS.length;
+
+  return (
+    <div className="w-full flex flex-col gap-2 select-none touch-none px-1">
+      {/* Waveform Bar Container */}
+      <div
+        ref={trackRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        className="w-full h-14 flex items-center justify-between gap-[3px] sm:gap-1 cursor-pointer py-1 relative group"
+        title="Click or drag across audio soundwave to seek"
+      >
+        {WAVEFORM_HEIGHTS.map((height, i) => {
+          const barPercent = (i / (totalBars - 1)) * 100;
+          const isPlayed = barPercent <= activePercent;
+
+          return (
+            <div
+              key={i}
+              style={{ height: `${height}px` }}
+              className={`flex-1 min-w-[2.5px] max-w-[6px] rounded-full transition-all duration-75 ${
+                isPlayed
+                  ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.85)] scale-y-105'
+                  : 'bg-white/25 group-hover:bg-white/35'
+              }`}
+            />
+          );
+        })}
+      </div>
+
+      {/* Timestamps */}
+      <div className="flex items-center justify-between text-xs font-semibold text-white/70 px-1 font-sans">
+        <span>{formatDuration(progressMs)}</span>
+        <span>{formatDuration(durationMs)}</span>
+      </div>
+    </div>
+  );
+});
+
+/**
+ * Standard Scrubber Slider for Classic & Velvet & Lime Themes.
  */
 const NowPlayingProgressBar: React.FC<{ seek: (ms: number) => void }> = React.memo(({ seek }) => {
   const { progressMs, durationMs } = usePlaybackProgress();
@@ -74,6 +167,7 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
     audioQuality,
     setAudioQuality,
     togglePlay,
+    playTrack,
     seek,
     toggleShuffle,
     toggleRepeat,
@@ -82,14 +176,349 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
   } = usePlayback();
 
   const { isLiked, toggleLike } = useLibrary();
-  const { isLiquidGlass, isVelvetLime, currentThemeDef } = useTheme();
+  const { isLiquidGlass, isVelvetLime, isUltraviolet, isGlacialGlass, isVelvetStyle, currentThemeDef } = useTheme();
   const [showQualityMenu, setShowQualityMenu] = useState(false);
 
   if (!currentTrack) return null;
 
   const liked = isLiked(currentTrack.id);
-  const albumCoverUrl = currentTrack.album.images[0]?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500';
+  const albumCoverUrl = currentTrack.album.images[0]?.url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500';
 
+  // Glacial Liquid Glass Layout (Matching Screen 3 "Music" Now Playing with Radial Arc Scrubber)
+  if (isGlacialGlass) {
+    const hateMeTrack = mockTracks.find((t) => t.name.includes('HATE ME')) || mockTracks[0];
+    const pray4LoveTrack = mockTracks.find((t) => t.name.includes('Pray 4 Love') || t.name.includes('Pray for Love')) || mockTracks[1];
+    const vampireTrack = mockTracks.find((t) => t.name.includes('Vampire')) || mockTracks[2];
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/60 md:backdrop-blur-2xl animate-in fade-in duration-200 select-none">
+        {/* Backdrop dismiss for desktop */}
+        <div className="hidden md:block absolute inset-0 cursor-pointer" onClick={onClose} />
+
+        <div className="w-full md:max-w-md h-full md:h-[92vh] md:max-h-[820px] md:rounded-[44px] md:border-[6px] md:border-white/80 shadow-[0_30px_70px_rgba(70,110,160,0.35)] flex flex-col justify-between p-6 relative overflow-hidden text-white z-10 backdrop-blur-3xl">
+          {/* Dual-Tone Background Image with Vertical Specular Reflection Seam */}
+          <div
+            className="absolute inset-0 z-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(56, 189, 248, 0.4) 0%, rgba(255, 255, 255, 0.05) 48%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.05) 52%, rgba(251, 146, 60, 0.45) 100%),
+                linear-gradient(to bottom, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0.65) 100%),
+                url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1000&h=1200&fit=crop')
+              `,
+            }}
+          />
+
+          {/* Vertical Luminous Glass Reflection Seam */}
+          <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1.5px] vertical-glass-seam pointer-events-none z-10" />
+
+          {/* Header Bar */}
+          <div className="flex items-center justify-between pt-1 z-20">
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full glacial-circle-btn flex items-center justify-center text-white/90 active:scale-95 transition-transform"
+              title="Close"
+            >
+              <ChevronLeft size={22} />
+            </button>
+
+            <h2 className="text-lg font-bold text-white tracking-wide drop-shadow-sm">
+              Music
+            </h2>
+
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full glacial-circle-btn flex items-center justify-center text-white/90 active:scale-95 transition-transform"
+              title="Minimize"
+            >
+              <ChevronDown size={20} />
+            </button>
+          </div>
+
+          {/* Curved Track Carousel */}
+          <div className="w-full flex items-center justify-center py-4 z-20">
+            <div className="flex items-center justify-center gap-3 text-center">
+              <button
+                onClick={() => playTrack(hateMeTrack, [hateMeTrack, pray4LoveTrack, vampireTrack])}
+                className="flex flex-col items-center opacity-60 hover:opacity-100 transition-all transform -rotate-6 hover:scale-105"
+              >
+                <span className="text-xs font-semibold text-white/80">01 HATE ME</span>
+                <span className="text-[10px] text-white/60">Ellie Goulding</span>
+              </button>
+
+              <div className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/30 shadow-lg transform scale-110">
+                <span className="text-sm font-extrabold text-white tracking-tight drop-shadow">
+                  {currentTrack.name}
+                </span>
+                <span className="text-xs text-sky-200 font-medium">
+                  {currentTrack.artists[0]?.name}
+                </span>
+              </div>
+
+              <button
+                onClick={() => playTrack(vampireTrack, [hateMeTrack, pray4LoveTrack, vampireTrack])}
+                className="flex flex-col items-center opacity-60 hover:opacity-100 transition-all transform rotate-6 hover:scale-105"
+              >
+                <span className="text-xs font-semibold text-white/80">03 Vampire</span>
+                <span className="text-[10px] text-white/60">Olivia Rodrigo</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Radial Arc Progress Dial */}
+          <div className="w-full flex-1 flex flex-col justify-end items-center px-4 pb-2 z-20">
+            <GlacialRadialArcScrubber />
+          </div>
+
+          {/* Master Sculptured Liquid Glass Controller Deck */}
+          <div className="w-full flex flex-col gap-3 pb-3 px-2 z-20">
+            {/* Secondary Controls: Shuffle & Repeat */}
+            <div className="flex items-center justify-between px-6">
+              <button
+                onClick={toggleShuffle}
+                className={`w-11 h-11 rounded-full glacial-circle-btn flex items-center justify-center shadow-md ${
+                  isShuffle ? 'text-sky-300 ring-2 ring-sky-300/50' : 'text-white/80'
+                }`}
+                title="Toggle Shuffle"
+              >
+                <Shuffle size={18} />
+              </button>
+
+              <button
+                onClick={toggleRepeat}
+                className={`w-11 h-11 rounded-full glacial-circle-btn flex items-center justify-center shadow-md ${
+                  repeatMode !== 'off' ? 'text-sky-300 ring-2 ring-sky-300/50' : 'text-white/80'
+                }`}
+                title="Toggle Repeat"
+              >
+                {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
+              </button>
+            </div>
+
+            {/* Organic Sculptured Dock Container */}
+            <div className="w-full p-2.5 rounded-[36px] glacial-sculpted-dock flex items-center justify-between px-6 shadow-2xl border border-white/60 backdrop-blur-3xl">
+              <button
+                onClick={prevTrack}
+                className="w-12 h-12 rounded-full glacial-circle-btn flex items-center justify-center text-white/90 shadow-md active:scale-95"
+                title="Previous Track"
+              >
+                <SkipBack size={22} fill="rgba(255, 255, 255, 0.4)" />
+              </button>
+
+              <div className="chromatic-halo">
+                <button
+                  onClick={togglePlay}
+                  className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-slate-900 shadow-[0_8px_25px_rgba(0,0,0,0.35)] active:scale-90 transition-transform"
+                  title={isPlaying ? 'Pause' : 'Play'}
+                >
+                  {isLoading ? (
+                    <Loader2 size={24} className="animate-spin text-slate-900" />
+                  ) : isPlaying ? (
+                    <Pause size={26} fill="#0f172a" className="text-slate-900" />
+                  ) : (
+                    <Play size={26} fill="#0f172a" className="text-slate-900 ml-1" />
+                  )}
+                </button>
+              </div>
+
+              <button
+                onClick={nextTrack}
+                className="w-12 h-12 rounded-full glacial-circle-btn flex items-center justify-center text-white/90 shadow-md active:scale-95"
+                title="Next Track"
+              >
+                <SkipForward size={22} fill="rgba(255, 255, 255, 0.4)" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Cosmic Ultraviolet Layout (Matching Screen 1 "Now Playing" from Reference Image)
+  if (isUltraviolet) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/80 md:backdrop-blur-2xl animate-in fade-in duration-200 select-none">
+        {/* Backdrop dismiss for desktop */}
+        <div className="hidden md:block absolute inset-0 cursor-pointer" onClick={onClose} />
+
+        <div className="w-full md:max-w-md h-full md:h-[92vh] md:max-h-[820px] md:rounded-[36px] md:border md:border-white/20 glass-player shadow-[0_25px_60px_rgba(0,0,0,0.85)] flex flex-col justify-between p-6 relative overflow-hidden cosmic-now-playing-bg text-white z-10">
+          {/* Top Atmospheric Aura Radiance */}
+          <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-[#7c3aed]/25 via-[#a855f7]/15 to-transparent pointer-events-none z-0" />
+
+          {/* Top Bar: Controls & Header */}
+          <div className="flex items-center justify-between pt-1 relative z-10">
+            <button
+              onClick={onClose}
+              className="frosted-circle-btn w-11 h-11 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform"
+              title="Minimize Player"
+            >
+              <ChevronLeft size={22} />
+            </button>
+
+            <div className="flex flex-col items-center">
+              <span className="text-sm font-bold text-white tracking-tight font-sans">
+                Now Playing
+              </span>
+            </div>
+
+            <button
+              onClick={() => toggleLike(currentTrack)}
+              className="frosted-circle-btn w-11 h-11 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform"
+              title="Save to Favourites"
+            >
+              <Heart
+                size={20}
+                className={liked ? 'text-[#d946ef] fill-[#d946ef]' : 'text-white'}
+              />
+            </button>
+          </div>
+
+          {/* Center: Large Circular Vinyl Disc with Atmospheric Aura Glow */}
+          <div className="flex items-center justify-center my-auto py-2 relative z-10">
+            {/* Ambient radiant glow behind circular image */}
+            <div className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-[#d946ef]/30 via-[#a855f7]/35 to-[#6366f1]/25 blur-3xl pointer-events-none z-0" />
+
+            <div className="relative z-10 group">
+              <img
+                src={albumCoverUrl}
+                alt={currentTrack.name}
+                decoding="async"
+                width={320}
+                height={320}
+                className="w-60 h-60 sm:w-72 sm:h-72 aspect-square object-cover rounded-full shadow-[0_0_40px_rgba(168,85,247,0.5),0_20px_50px_rgba(0,0,0,0.85)] border-2 border-white/25 ring-1 ring-white/10"
+              />
+            </div>
+          </div>
+
+          {/* Bottom Area: Track Title, Artist, Waveform Scrubber & Controls */}
+          <div className="flex flex-col gap-3 pb-1 relative z-10">
+            {/* Title & Artist (Centered, bold) */}
+            <div className="flex flex-col items-center text-center my-1">
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-sans truncate max-w-[90%] drop-shadow-md">
+                {currentTrack.name}
+              </h2>
+              <span className="text-sm font-medium text-[#c4b5fd] mt-0.5 font-sans">
+                {currentTrack.artists.map((a) => a.name).join(', ')}
+              </span>
+            </div>
+
+            {/* Waveform Audio Visualizer Scrubber (Screen 1) */}
+            <WaveformAudioScrubber seek={seek} />
+
+            {/* Master Playback Controls */}
+            <div className="flex items-center justify-between px-3 pt-2">
+              <button
+                onClick={toggleShuffle}
+                className={`p-2 transition-all ${
+                  isShuffle ? 'text-[#d946ef] drop-shadow-[0_0_8px_rgba(217,70,239,0.8)]' : 'text-white/60 hover:text-white'
+                }`}
+                title="Shuffle"
+              >
+                <Shuffle size={20} />
+              </button>
+              <button
+                onClick={prevTrack}
+                className="p-2 text-white hover:opacity-80 transition-opacity active:scale-95"
+                title="Previous"
+              >
+                <SkipBack size={26} fill="currentColor" />
+              </button>
+
+              {/* Master Play/Pause: Large Circular Light Frosted Glass Disc */}
+              <button
+                onClick={togglePlay}
+                disabled={isLoading}
+                className="w-18 h-18 sm:w-20 sm:h-20 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all light-glass-disc text-white shadow-[0_0_24px_rgba(168,85,247,0.35)]"
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isLoading ? (
+                  <Loader2 size={26} className="animate-spin text-white" />
+                ) : isPlaying ? (
+                  <Pause size={28} fill="currentColor" />
+                ) : (
+                  <Play size={28} fill="currentColor" className="ml-1" />
+                )}
+              </button>
+
+              <button
+                onClick={nextTrack}
+                className="p-2 text-white hover:opacity-80 transition-opacity active:scale-95"
+                title="Next"
+              >
+                <SkipForward size={26} fill="currentColor" />
+              </button>
+              <button
+                onClick={toggleRepeat}
+                className={`p-2 transition-all ${
+                  repeatMode !== 'off'
+                    ? 'text-[#d946ef] drop-shadow-[0_0_8px_rgba(217,70,239,0.8)]'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                title="Repeat"
+              >
+                {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
+              </button>
+            </div>
+
+            {/* Quality Selector Badge */}
+            <div className="flex items-center justify-between pt-1 text-[#b3b3b3] text-xs">
+              <div className="relative">
+                <button
+                  onClick={() => setShowQualityMenu((prev) => !prev)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/20 bg-white/5 text-white"
+                >
+                  <Sliders size={13} />
+                  <span>
+                    {audioQuality === 'very_high'
+                      ? '320k'
+                      : audioQuality === 'high'
+                      ? '256k'
+                      : audioQuality === 'normal'
+                      ? '160k'
+                      : '96k'}
+                  </span>
+                </button>
+
+                {showQualityMenu && (
+                  <div className="absolute bottom-10 left-0 w-48 bg-[#18122c] border border-white/20 rounded-xl shadow-2xl p-1.5 z-50 backdrop-blur-xl">
+                    {[
+                      { id: 'very_high', label: 'Very High', rate: '320 kbps' },
+                      { id: 'high', label: 'High', rate: '256 kbps' },
+                      { id: 'normal', label: 'Normal', rate: '160 kbps' },
+                      { id: 'low', label: 'Low', rate: '96 kbps' },
+                    ].map((q) => (
+                      <button
+                        key={q.id}
+                        onClick={() => {
+                          setAudioQuality(q.id as AudioQuality);
+                          setShowQualityMenu(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded text-left ${
+                          audioQuality === q.id ? 'text-[#d946ef] font-bold' : 'text-white'
+                        }`}
+                      >
+                        <span>{q.label}</span>
+                        {audioQuality === q.id && <Check size={14} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <span className="text-[11px] text-[#b3b3b3]">Streaming via YouTube Audio</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Velvet & Spatial Liquid Glass Metaball Music Player (Full card + Dock + Scrubber)
+  if (isVelvetStyle) {
+    return <VelvetMetaballFullPlayer onClose={onClose} />;
+  }
+
+  // Classic Spotify & Liquid Glass Layouts
   return (
     <div
       className={`fixed inset-0 z-50 md:hidden flex flex-col justify-between p-6 select-none overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-300 ${
@@ -100,23 +529,30 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
           : 'bg-gradient-to-b from-[#3a3a3a] via-[#121212] to-black text-white'
       }`}
     >
-      {/* Dynamic Blurred Artwork Backdrop Behind Transparent Glass (Dribbble Screen 2) */}
+      {/* Transparent Frosted Glass Top Half (Velvet & Lime) */}
       {isVelvetLime && (
-        <div className="absolute top-0 left-0 right-0 h-[62%] overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-0 left-0 right-0 h-[58%] overflow-hidden pointer-events-none z-0">
           <div
-            className="w-full h-full bg-cover bg-center scale-125 filter blur-3xl opacity-60"
+            className="w-full h-full bg-cover bg-center scale-110 opacity-30"
             style={{
               backgroundImage: `url(${albumCoverUrl})`,
-              maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)',
+              filter: 'blur(24px) saturate(160%)',
             }}
           />
-          {/* Transparent Frosted Smoked Glass Overlay */}
-          <div className="absolute inset-0 bg-[#0B0B12]/20 backdrop-blur-sm" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(180deg, rgba(22, 23, 33, 0.75) 0%, rgba(14, 15, 22, 0.88) 85%, transparent 100%)',
+              backdropFilter: 'blur(24px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: 'inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.45)',
+            }}
+          />
         </div>
       )}
 
-      {/* Top Bar: Controls & Header (Z-10) */}
+      {/* Top Bar: Controls & Header */}
       <div className="flex items-center justify-between pt-2 relative z-10">
         {isVelvetLime ? (
           <button
@@ -164,7 +600,7 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
         )}
       </div>
 
-      {/* Center: Large Album Art (Circular Vinyl Disc on Velvet & Lime theme) */}
+      {/* Center: Large Album Art */}
       <div className="flex items-center justify-center my-auto py-2 relative z-10">
         {isVelvetLime && (
           <div className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-[#f97316]/30 via-[#D8B4FE]/25 to-[#D2F843]/20 blur-3xl pointer-events-none z-0" />
@@ -191,9 +627,8 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
         )}
       </div>
 
-      {/* Bottom Area: Info, Lyrics Snippet, Scrubber & Controls */}
+      {/* Bottom Area: Info, Scrubber & Controls */}
       <div className="flex flex-col gap-3 pb-2 relative z-10">
-        {/* Title & Artist */}
         {isVelvetLime ? (
           <div className="flex flex-col items-center text-center">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-sans truncate max-w-[90%]">
@@ -203,7 +638,7 @@ export const MobileNowPlaying: React.FC<MobileNowPlayingProps> = ({ onClose }) =
               {currentTrack.artists.map((a) => a.name).join(' x ')}
             </span>
 
-            {/* 3-Line Synced Lyrics Snippet Card (Dribbble Screen 2) */}
+            {/* 3-Line Synced Lyrics Snippet Card */}
             <div className="flex flex-col items-center text-center my-3 max-w-xs mx-auto space-y-1 select-none">
               <p className="text-xs sm:text-sm text-white/35 font-medium transition-colors">
                 Whispers in the midnight breeze,

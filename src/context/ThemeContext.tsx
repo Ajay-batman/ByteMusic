@@ -1,6 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type AppTheme = 'dark' | 'liquid-glass' | 'velvet-lime' | 'cyberpunk' | 'amoled' | 'aurora';
+export type AppTheme =
+  | 'dark'
+  | 'liquid-glass'
+  | 'velvet-lime'
+  | 'cosmic-ultraviolet'
+  | 'cyberpunk'
+  | 'amoled'
+  | 'aurora'
+  | 'glacial-glass'
+  | 'sunset'
+  | 'frost';
 
 export interface ThemeDefinition {
   id: AppTheme;
@@ -22,17 +32,17 @@ export const THEME_REGISTRY: Record<AppTheme, ThemeDefinition> = {
   },
   'velvet-lime': {
     id: 'velvet-lime',
-    name: 'Velvet & Lime',
+    name: 'Violet Spatial Glass',
     category: 'Aesthetic',
-    description: 'Dribbble-inspired velvet dark with electric acid lime and pastel lavender cards.',
+    description: 'Velvet dark spatial glass with electric acid lime and pastel lavender cards.',
     previewColors: ['#0B0B10', '#D2F843', '#D8B4FE'],
     accentColor: '#D2F843',
   },
   'liquid-glass': {
     id: 'liquid-glass',
-    name: 'iOS Liquid Glass',
+    name: 'Frosted Prism',
     category: 'Glass',
-    description: 'Apple-inspired frosted glassmorphism, fluid ambient mesh, and specular light.',
+    description: 'Frosted glassmorphism, fluid ambient mesh, and specular prism light.',
     previewColors: ['#080811', '#7c3aed', '#06b6d4'],
     accentColor: '#06b6d4',
   },
@@ -54,11 +64,43 @@ export const THEME_REGISTRY: Record<AppTheme, ThemeDefinition> = {
   },
   'aurora': {
     id: 'aurora',
-    name: 'Nordic Aurora',
+    name: 'Spatial Aurora',
+    category: 'Glass',
+    description: 'Deep navy glass with radiant emerald, turquoise, and indigo polar glows.',
+    previewColors: ['#091522', '#34d399', '#22d3ee'],
+    accentColor: '#34d399',
+  },
+  'sunset': {
+    id: 'sunset',
+    name: 'Spatial Sunset',
+    category: 'Glass',
+    description: 'Deep velvet violet with incandescent rose, warm amber, and vivid fuchsia radiance.',
+    previewColors: ['#150716', '#f43f5e', '#d946ef'],
+    accentColor: '#f43f5e',
+  },
+  'frost': {
+    id: 'frost',
+    name: 'Spatial Frost',
+    category: 'Glass',
+    description: 'Crisp glacial light gradient with sky blue, indigo aura, and dark ink typography.',
+    previewColors: ['#f0f9ff', '#38bdf8', '#818cf8'],
+    accentColor: '#38bdf8',
+  },
+  'glacial-glass': {
+    id: 'glacial-glass',
+    name: 'Glacial Liquid Glass',
+    category: 'Glass',
+    description: 'Ethereal frosted ice glassmorphism, iridescent specular light, and curved radial arc controls.',
+    previewColors: ['#c3d7e8', '#e2edf7', '#60a5fa'],
+    accentColor: '#38bdf8',
+  },
+  'cosmic-ultraviolet': {
+    id: 'cosmic-ultraviolet',
+    name: 'Cosmic Ultraviolet',
     category: 'Vibrant',
-    description: 'Deep arctic marine blue with glowing emerald and turquoise polar auroras.',
-    previewColors: ['#06131c', '#10b981', '#22d3ee'],
-    accentColor: '#10b981',
+    description: 'Deep midnight ultraviolet with electric magenta and neon sapphire radiance.',
+    previewColors: ['#080716', '#a855f7', '#d946ef'],
+    accentColor: '#d946ef',
   },
 };
 
@@ -68,9 +110,14 @@ interface ThemeContextType {
   toggleTheme: () => void;
   isLiquidGlass: boolean;
   isVelvetLime: boolean;
+  isUltraviolet: boolean;
+  isGlacialGlass: boolean;
   isCyberpunk: boolean;
   isAmoled: boolean;
   isAurora: boolean;
+  isSunset: boolean;
+  isFrost: boolean;
+  isVelvetStyle: boolean;
   isThemeModalOpen: boolean;
   setIsThemeModalOpen: (open: boolean) => void;
   openThemeModal: () => void;
@@ -88,7 +135,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return saved;
       }
     } catch {}
-    return 'velvet-lime';
+    return 'dark';
   });
 
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
@@ -113,11 +160,28 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Sync document root class for theme CSS cascades
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('theme-dark', 'theme-liquid-glass', 'theme-velvet-lime', 'theme-cyberpunk', 'theme-amoled', 'theme-aurora');
+    root.classList.remove(
+      'theme-dark',
+      'theme-liquid-glass',
+      'theme-velvet-lime',
+      'theme-cosmic-ultraviolet',
+      'theme-cyberpunk',
+      'theme-amoled',
+      'theme-aurora',
+      'theme-glacial-glass',
+      'theme-sunset',
+      'theme-frost',
+      'theme-light'
+    );
     root.classList.add(`theme-${theme}`);
+    if (theme === 'frost') {
+      root.classList.add('theme-light');
+    }
   }, [theme]);
 
   const currentThemeDef = THEME_REGISTRY[theme] || THEME_REGISTRY.dark;
+  const isVelvetStyle =
+    theme === 'velvet-lime' || theme === 'aurora' || theme === 'sunset' || theme === 'frost';
 
   return (
     <ThemeContext.Provider
@@ -127,9 +191,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleTheme,
         isLiquidGlass: theme === 'liquid-glass',
         isVelvetLime: theme === 'velvet-lime',
+        isUltraviolet: theme === 'cosmic-ultraviolet',
+        isGlacialGlass: theme === 'glacial-glass',
         isCyberpunk: theme === 'cyberpunk',
         isAmoled: theme === 'amoled',
         isAurora: theme === 'aurora',
+        isSunset: theme === 'sunset',
+        isFrost: theme === 'frost',
+        isVelvetStyle,
         isThemeModalOpen,
         setIsThemeModalOpen,
         openThemeModal,

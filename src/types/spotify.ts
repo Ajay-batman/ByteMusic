@@ -39,7 +39,10 @@ export interface Track {
   youtubeId?: string; // Full-length audio stream ID
   addedAt?: string;
   bpm?: number;
+  genre?: string;
 }
+
+export type ChartRegion = 'us' | 'in' | 'gb' | 'jp' | 'br' | 'de' | 'au' | 'kr';
 
 export interface Playlist {
   id: string;
@@ -54,6 +57,15 @@ export interface Playlist {
   tracks: Track[];
 }
 
+export type AppView = 'home' | 'search' | 'library' | 'playlist' | 'about' | 'downloader';
+
+export interface AboutFields {
+  appName: string;
+  version: string;
+  description: string;
+  developerName: string;
+}
+
 export type SearchCategory =
   | 'all'
   | 'artists'
@@ -62,6 +74,44 @@ export type SearchCategory =
   | 'tracks'
   | 'podcasts'
   | 'genres';
+
+export interface SearchCatalogArtist {
+  id: string;
+  name: string;
+  genre: string;
+  image: string;
+  matchScore: number;
+  tracks: Track[];
+}
+
+export interface SearchCatalogAlbum {
+  id: string;
+  name: string;
+  artistName: string;
+  releaseYear: string;
+  trackCount: number;
+  genre: string;
+  image: string;
+}
+
+export interface SearchCatalogPodcast {
+  id: string;
+  name: string;
+  artistName: string;
+  trackCount: number;
+  genre: string;
+  image: string;
+}
+
+export interface SearchCatalogResponse {
+  query: string;
+  region: string;
+  tracks: Track[];
+  artists: SearchCatalogArtist[];
+  albums: SearchCatalogAlbum[];
+  podcasts: SearchCatalogPodcast[];
+  artistPlaylists: Playlist[];
+}
 
 export enum ColumnType {
   INDEX = 'INDEX',

@@ -21,6 +21,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(YouTubeDownloaderPlugin.class);
         super.onCreate(savedInstanceState);
         instance = this;
 
