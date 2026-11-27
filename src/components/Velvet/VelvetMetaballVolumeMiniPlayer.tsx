@@ -82,12 +82,12 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
 
   const isCompactPhone = viewportW < 365;
   const isNarrow = viewportW < 520;
-  const BASE_PILL_W = isCompactPhone ? 204 : isNarrow ? 244 : 254;
+  const BASE_PILL_W = isCompactPhone ? 200 : isNarrow ? 236 : 254;
   const EXPANDED_PILL_W = isCompactPhone ? 286 : isNarrow ? 316 : 354;
-  const PILL_H = isNarrow ? 60 : 66;
-  const DROPLET_SIZE = isNarrow ? 56 : 66;
-  const REST_OFFSET_X = isCompactPhone ? 156 : isNarrow ? 162 : 190;
-  const STAGE_SHIFT_SEPARATED = isCompactPhone ? -36 : isNarrow ? -34 : -42;
+  const PILL_H = isNarrow ? 58 : 66;
+  const DROPLET_SIZE = isNarrow ? 54 : 66;
+  const REST_OFFSET_X = isCompactPhone ? 156 : isNarrow ? 164 : 190;
+  const STAGE_SHIFT_SEPARATED = isCompactPhone ? -34 : isNarrow ? -28 : -42;
 
   // Real volume 0..100
   const volumePct = isMuted ? 0 : Math.round(volume * 100);
@@ -219,10 +219,10 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
       const nx = dx / dist;
       const ny = dy / dist;
 
-      const isMobile = s.basePillW < 230;
+      const isMobile = s.basePillW <= 245;
       const pillHalfSpan = (s.currentPillW - s.pillH) / 2;
       const bridgeThreshold =
-        pillHalfSpan + (isMobile ? 46 : 62) + viscosity * (isMobile ? 1.25 : 1.4);
+        pillHalfSpan + (isMobile ? 34 : 62) + viscosity * (isMobile ? 1.05 : 1.4);
       const dockTargetX = s.pX + (s.expandedPillW - s.dropletSize) / 2 - 6;
 
       const outerEdge = bridgeThreshold;

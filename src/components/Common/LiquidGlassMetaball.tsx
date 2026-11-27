@@ -422,7 +422,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
     if (!s.pointerActive || s.interactionMode === 'click') return;
 
     const delta = Math.abs(e.clientX - s.pointerDownX);
-    if (!s.isDragging && delta > 6) {
+    if (!s.isDragging && delta > 4) {
       s.isDragging = true;
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -458,7 +458,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
       s.suppressNextClick = true;
       setTimeout(() => {
         phys.current.suppressNextClick = false;
-      }, 60);
+      }, 250);
 
       let nearestIdx = 0;
       let minDist = Infinity;
@@ -649,8 +649,12 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
               aria-label={item.label}
               title={item.label}
               aria-current={isActive ? 'page' : undefined}
-              style={{ width: ITEM_SIZE, height: ITEM_SIZE }}
-              className={`relative rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-90 ${
+              style={{
+                width: ITEM_SIZE,
+                height: ITEM_SIZE,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+              className={`relative rounded-full flex items-center justify-center transition-colors duration-200 cursor-pointer touch-none ${
                 useDarkInk
                   ? isActive
                     ? 'text-slate-950 scale-110'
