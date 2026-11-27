@@ -10,6 +10,15 @@ let pendingOrigin: TransitionOrigin | null = null;
 let miniPlayerArtworkEl: HTMLElement | null = null;
 let miniPlayerContainerEl: HTMLElement | null = null;
 let miniPlayerBounceEl: HTMLElement | null = null;
+let miniPlayerCatchCallback: (() => void) | null = null;
+
+/**
+ * Registers an optional physics-loop callback (e.g. VelvetMetaballVolumeMiniPlayer's
+ * 60fps spring impulse) to fire when the full player lands back into the mini-player.
+ */
+export function registerMiniPlayerCatchCallback(cb: (() => void) | null): void {
+  miniPlayerCatchCallback = cb;
+}
 
 /**
  * Registers the mini-player's outer pill container so the full player can
@@ -28,10 +37,15 @@ export function registerMiniPlayerContainer(
  * right as the collapsing full player lands back into it.
  */
 export function triggerMiniPlayerCatchBounce(): void {
-  const target = miniPlayerBounceEl || miniPlayerContainerEl;
-  if (!target || typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return;
   try {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (miniPlayerCatchCallback) {
+      miniPlayerCatchCallback();
+      return;
+    }
+    const target = miniPlayerBounceEl || miniPlayerContainerEl;
+    if (!target) return;
     target.animate(
       [
         { transform: 'translate3d(0, 0, 0) scale3d(1, 1, 1)', offset: 0 },

@@ -11,7 +11,12 @@ import {
 } from 'lucide-react';
 import { usePlayback, usePlaybackProgress } from '../../context/PlaybackContext';
 import { useTheme } from '../../context/ThemeContext';
-import { captureTransitionOrigin, registerMiniPlayerArtwork, registerMiniPlayerContainer } from '../../utils/motion';
+import {
+  captureTransitionOrigin,
+  registerMiniPlayerArtwork,
+  registerMiniPlayerCatchCallback,
+  registerMiniPlayerContainer,
+} from '../../utils/motion';
 
 interface VelvetMetaballVolumeMiniPlayerProps {
   onOpenFullPlayer: () => void;
@@ -115,9 +120,19 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
   useEffect(() => {
     registerMiniPlayerArtwork(artworkDiscRef.current);
     registerMiniPlayerContainer(primaryContentRef.current, bounceStageRef.current);
+    registerMiniPlayerCatchCallback(() => {
+      const s = phys.current;
+      // Exact same 60fps liquid-glass spring impulse as volume-droplet merge,
+      // directed vertically to catch the collapsing full player.
+      s.pScaleVx += 0.14;
+      s.pScaleVy -= 0.12;
+      s.pVy += 2.6;
+      wakePhysicsRef.current?.();
+    });
     return () => {
       registerMiniPlayerArtwork(null);
       registerMiniPlayerContainer(null, null);
+      registerMiniPlayerCatchCallback(null);
     };
   }, [currentTrack?.id]);
 
@@ -433,10 +448,13 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
         Math.abs(s.sVx) < 0.02 &&
         Math.abs(s.sVy) < 0.02 &&
         Math.abs(s.pX) < 0.08 &&
+        Math.abs(s.pY) < 0.08 &&
         Math.abs(s.pVx) < 0.02 &&
+        Math.abs(s.pVy) < 0.02 &&
         Math.abs(s.currentPillW - s.basePillW) < 0.1 &&
         Math.abs(s.sScaleX - 1) < 0.002 &&
-        Math.abs(s.pScaleX - 1) < 0.002;
+        Math.abs(s.pScaleX - 1) < 0.002 &&
+        Math.abs(s.pScaleY - 1) < 0.002;
       if (!settled) {
         rafId = requestAnimationFrame(tick);
       }
