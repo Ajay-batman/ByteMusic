@@ -109,14 +109,15 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
   const volumePanelRef = useRef<HTMLDivElement>(null);
   const miniInfoRef = useRef<HTMLDivElement>(null);
   const artworkDiscRef = useRef<HTMLDivElement>(null);
+  const bounceStageRef = useRef<HTMLDivElement>(null);
   const wakePhysicsRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     registerMiniPlayerArtwork(artworkDiscRef.current);
-    registerMiniPlayerContainer(primaryContentRef.current);
+    registerMiniPlayerContainer(primaryContentRef.current, bounceStageRef.current);
     return () => {
       registerMiniPlayerArtwork(null);
-      registerMiniPlayerContainer(null);
+      registerMiniPlayerContainer(null, null);
     };
   }, [currentTrack?.id]);
 
@@ -543,6 +544,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
 
   return (
     <div
+      ref={bounceStageRef}
       style={{ height: PILL_H }}
       className={`relative w-full flex items-center justify-center select-none pointer-events-none ${className}`}
     >

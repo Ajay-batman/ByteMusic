@@ -9,13 +9,45 @@ export interface TransitionOrigin {
 let pendingOrigin: TransitionOrigin | null = null;
 let miniPlayerArtworkEl: HTMLElement | null = null;
 let miniPlayerContainerEl: HTMLElement | null = null;
+let miniPlayerBounceEl: HTMLElement | null = null;
 
 /**
  * Registers the mini-player's outer pill container so the full player can
  * morph out of it on open and collapse back into it on close.
  */
-export function registerMiniPlayerContainer(el: HTMLElement | null): void {
+export function registerMiniPlayerContainer(
+  el: HTMLElement | null,
+  bounceEl: HTMLElement | null = el
+): void {
   miniPlayerContainerEl = el;
+  miniPlayerBounceEl = bounceEl;
+}
+
+/**
+ * Plays a tactile squash-and-rebound "catch" bounce on the mini-player
+ * right as the collapsing full player lands back into it.
+ */
+export function triggerMiniPlayerCatchBounce(): void {
+  const target = miniPlayerBounceEl || miniPlayerContainerEl;
+  if (!target || typeof window === 'undefined') return;
+  try {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    target.animate(
+      [
+        { transform: 'translate3d(0, 0, 0) scale3d(1, 1, 1)', offset: 0 },
+        { transform: 'translate3d(0, 3.5px, 0) scale3d(1.038, 0.925, 1)', offset: 0.32 },
+        { transform: 'translate3d(0, -1.5px, 0) scale3d(0.985, 1.022, 1)', offset: 0.68 },
+        { transform: 'translate3d(0, 0, 0) scale3d(1, 1, 1)', offset: 1 },
+      ],
+      {
+        duration: 320,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        fill: 'none',
+      }
+    );
+  } catch {
+    // Graceful no-op
+  }
 }
 
 export function hasMiniPlayerContainer(): boolean {
@@ -113,6 +145,9 @@ export function runContainerCloseToMiniPlayer(sheetEl: HTMLElement | null): bool
         fill: 'forwards',
       }
     );
+    window.setTimeout(() => {
+      triggerMiniPlayerCatchBounce();
+    }, 190);
     return true;
   } catch {
     return false;
