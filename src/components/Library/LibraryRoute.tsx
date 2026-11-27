@@ -347,7 +347,7 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
       ) : viewMode === 'grid' ? (
         /* iOS Liquid Glass Card Grid */
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
-          {filteredPlaylists.map((pl, idx) => {
+          {filteredPlaylists.map((pl) => {
             const isFavorites = pl.id === 'playlist-favorites';
             const isRecentlyPlayed = pl.id === 'playlist-recently-played';
             const isCurrentPlaylistPlaying =
@@ -361,13 +361,12 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
                   onSelectPlaylist(pl);
                 }}
                 style={{
-                  '--stagger-i': Math.min(idx, 10),
                   contain: 'layout paint',
                   boxShadow: isFrost
                     ? 'inset 0 1px 1px rgba(255,255,255,0.95), 0 10px 22px -8px rgba(15,23,42,0.08)'
                     : 'inset 0 1px 1px rgba(255,255,255,0.28), 0 12px 26px -10px rgba(0,0,0,0.45)',
-                } as React.CSSProperties}
-                className={`group relative overflow-hidden rounded-[22px] p-3 border transition-colors duration-200 cursor-pointer select-none active:scale-[0.99] anim-stagger-item ${
+                }}
+                className={`group relative overflow-hidden rounded-[22px] p-3 border transition-colors duration-200 cursor-pointer select-none active:scale-[0.99] ${
                   isFrost
                     ? 'border-slate-200/90 bg-white/80 hover:bg-white/95 hover:border-slate-300'
                     : isAurora
@@ -503,7 +502,7 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
       ) : (
         /* iOS Liquid Glass List View */
         <div className="space-y-2">
-          {filteredPlaylists.map((pl, idx) => {
+          {filteredPlaylists.map((pl) => {
             const isFavorites = pl.id === 'playlist-favorites';
             const isRecentlyPlayed = pl.id === 'playlist-recently-played';
             const isCurrentPlaylistPlaying =
@@ -517,13 +516,12 @@ export const LibraryRoute: React.FC<LibraryRouteProps> = ({ onSelectPlaylist }) 
                   onSelectPlaylist(pl);
                 }}
                 style={{
-                  '--stagger-i': Math.min(idx, 10),
                   contain: 'layout paint',
                   boxShadow: isFrost
                     ? 'inset 0 1px 1px rgba(255,255,255,0.9), 0 8px 18px -6px rgba(15,23,42,0.06)'
                     : 'inset 0 1px 1px rgba(255,255,255,0.24), 0 8px 20px -6px rgba(0,0,0,0.35)',
-                } as React.CSSProperties}
-                className={`group flex items-center justify-between p-3 rounded-2xl border transition-colors duration-200 cursor-pointer select-none active:scale-[0.99] anim-stagger-item ${
+                }}
+                className={`group flex items-center justify-between p-3 rounded-2xl border transition-colors duration-200 cursor-pointer select-none active:scale-[0.99] ${
                   isFrost
                     ? 'border-slate-200/90 bg-white/80 hover:bg-white/95 hover:border-slate-300'
                     : isAurora

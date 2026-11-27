@@ -128,9 +128,8 @@ const TrackRow: React.FC<{
     <div
       onClick={() => togglePlay()}
       onDoubleClick={() => togglePlay()}
-      style={{
-        '--stagger-i': Math.min(index, 10),
-        ...(isSpatialGlass
+      style={
+        isSpatialGlass
           ? {
               backdropFilter: 'blur(14px) saturate(175%)',
               WebkitBackdropFilter: 'blur(14px) saturate(175%)',
@@ -138,9 +137,9 @@ const TrackRow: React.FC<{
                 ? 'inset 0 1px 1px rgba(255,255,255,0.9), 0 4px 12px -4px rgba(15,23,42,0.06)'
                 : 'inset 0 1px 1px rgba(255,255,255,0.22), 0 6px 16px -6px rgba(0,0,0,0.3)',
             }
-          : {}),
-      } as React.CSSProperties}
-      className={`group grid grid-cols-[16px_1fr_auto] md:grid-cols-[16px_4fr_3fr_2fr_minmax(140px,1fr)] gap-3 md:gap-4 px-2.5 sm:px-4 py-2.5 items-center transition-all duration-150 cursor-pointer relative anim-stagger-item ${
+          : undefined
+      }
+      className={`group grid grid-cols-[16px_1fr_auto] md:grid-cols-[16px_4fr_3fr_2fr_minmax(140px,1fr)] gap-3 md:gap-4 px-2.5 sm:px-4 py-2.5 items-center transition-all duration-150 cursor-pointer relative ${
         isSpatialGlass
           ? `mb-1.5 rounded-2xl border ${
               isFrost

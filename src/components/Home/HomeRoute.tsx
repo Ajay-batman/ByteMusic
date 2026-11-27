@@ -171,15 +171,14 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
             </button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {allPlaylists.map((pl, idx) => (
+            {allPlaylists.map((pl) => (
               <div
                 key={pl.id}
                 onClick={(e) => {
                   captureTransitionOrigin(e.currentTarget, pl.images[0]?.url);
                   onSelectPlaylist(pl);
                 }}
-                style={{ '--stagger-i': Math.min(idx, 10) } as React.CSSProperties}
-                className={`group p-4 transition-all duration-200 cursor-pointer select-none relative anim-stagger-item ${
+                className={`group p-4 transition-all duration-200 cursor-pointer select-none relative ${
                   isLiquidGlass ? 'glass-card rounded-2xl' : 'bg-[#181818] hover:bg-[#282828] rounded-lg'
                 }`}
               >
@@ -484,15 +483,14 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
             Featured Collections
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-            {allPlaylists.map((pl, idx) => (
+            {allPlaylists.map((pl) => (
               <div
                 key={pl.id}
                 onClick={(e) => {
                   captureTransitionOrigin(e.currentTarget, pl.images[0]?.url);
                   onSelectPlaylist(pl);
                 }}
-                style={{ '--stagger-i': Math.min(idx, 10) } as React.CSSProperties}
-                className="group p-3 rounded-2xl bg-[#141029]/70 hover:bg-[#1d163c]/90 border border-white/10 hover:border-[#d946ef]/40 transition-all cursor-pointer select-none shadow-md anim-stagger-item"
+                className="group p-3 rounded-2xl bg-[#141029]/70 hover:bg-[#1d163c]/90 border border-white/10 hover:border-[#d946ef]/40 transition-all cursor-pointer select-none shadow-md"
               >
                 <div className="relative mb-2.5">
                   <img
@@ -1033,7 +1031,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
           Featured Collections
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-          {allPlaylists.map((pl, idx) => (
+          {allPlaylists.map((pl) => (
             <div
               key={pl.id}
               onClick={(e) => {
@@ -1041,13 +1039,12 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({ onSelectPlaylist, onOpenAb
                 onSelectPlaylist(pl);
               }}
               style={{
-                '--stagger-i': Math.min(idx, 10),
                 contain: 'layout paint',
                 boxShadow: isFrost
                   ? 'inset 0 1px 1px rgba(255,255,255,0.95), 0 10px 22px -8px rgba(15,23,42,0.09)'
                   : 'inset 0 1px 1px rgba(255,255,255,0.28), 0 12px 28px -10px rgba(0,0,0,0.45)',
-              } as React.CSSProperties}
-              className={`group relative overflow-hidden p-3 rounded-2xl border transition-colors duration-200 cursor-pointer select-none anim-stagger-item ${
+              }}
+              className={`group relative overflow-hidden p-3 rounded-2xl border transition-colors duration-200 cursor-pointer select-none ${
                 isFrost
                   ? 'border-slate-200/90 bg-white/80 hover:bg-white/95 hover:border-slate-300'
                   : 'border-white/20 bg-white/[0.08] hover:bg-white/[0.13] hover:border-white/40'

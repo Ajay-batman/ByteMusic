@@ -64,7 +64,6 @@ export const SettingsPopMenu: React.FC<SettingsPopMenuProps> = ({
           style={
             isSpatialGlass
               ? {
-                  backgroundColor: isFrost ? 'rgba(255, 255, 255, 0.94)' : 'rgba(18, 18, 32, 0.94)',
                   backdropFilter: 'blur(24px) saturate(190%)',
                   WebkitBackdropFilter: 'blur(24px) saturate(190%)',
                   boxShadow: isFrost
@@ -77,7 +76,7 @@ export const SettingsPopMenu: React.FC<SettingsPopMenuProps> = ({
             isFrost
               ? 'bg-white/95 border-slate-200 text-slate-900'
               : isSpatialGlass
-              ? 'bg-[#121220]/95 border-white/25 text-white'
+              ? 'bg-[#141422]/92 border-white/20 text-white'
               : 'bg-[#242424] border-[#3a3a3a] text-white'
           }`}
         >
