@@ -145,6 +145,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
     pointerDownX: 0,
     dragStartX: 0,
     suppressNextClick: false,
+    lastFrameTime: typeof performance !== 'undefined' ? performance.now() : 0,
     viscosity,
     stiffness,
     interactionMode,
@@ -236,15 +237,27 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
     let rafId = 0;
 
     const schedule = () => {
-      if (!rafId) rafId = requestAnimationFrame(tick);
+      if (!rafId && !document.hidden) {
+        phys.current.lastFrameTime = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
     };
     wakePhysicsRef.current = schedule;
 
-    const tick = () => {
+    const onVisibility = () => {
+      if (!document.hidden) schedule();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const tick = (now: number) => {
       rafId = 0;
+      if (document.hidden) return;
       const s = phys.current;
+      const dtScale = Math.min(2.2, Math.max(0.35, (now - s.lastFrameTime) / 16.6667));
+      s.lastFrameTime = now;
+
       const k = s.stiffness;
-      const damping = 0.76;
+      const damping = Math.pow(0.76, dtScale);
 
       // 1. Distance to target & surface-tension magnetic pull
       const dx = s.sTargetX - s.sX;
@@ -257,9 +270,9 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
 
       // 2. Integrate Active Placeholder Droplet Spring
       const activeK = s.isDragging ? Math.min(0.42, k * 2.2) : k;
-      const activeDamp = s.isDragging ? 0.68 : damping;
-      s.sVx = (s.sVx + dx * activeK + tensionPull) * activeDamp;
-      s.sX += s.sVx;
+      const activeDamp = s.isDragging ? Math.pow(0.68, dtScale) : damping;
+      s.sVx = (s.sVx + (dx * activeK + tensionPull) * dtScale) * activeDamp;
+      s.sX += s.sVx * dtScale;
 
       // 3. Two-Component Metaball Fusion with Each Icon Node
       const bridgeThreshold = 46 + s.viscosity * 0.85;
@@ -363,6 +376,7 @@ export const LiquidGlassMetaballNav: React.FC<LiquidGlassMetaballNavProps> = ({
     wakePhysicsRef.current();
     return () => {
       wakePhysicsRef.current = null;
+      document.removeEventListener('visibilitychange', onVisibility);
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);

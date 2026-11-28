@@ -58,7 +58,7 @@ const AppContent: React.FC = () => {
   const [playlistOrigin, setPlaylistOrigin] = useState<'home' | 'search' | 'library'>('library');
   const [playerStage, setPlayerStage] = useState<'closed' | 'open' | 'closing'>('closed');
   const { allPlaylists, getPlaylistById } = useLibrary();
-  const { theme, isLiquidGlass, isUltraviolet, isVelvetStyle } = useTheme();
+  const { theme, isLiquidGlass, isUltraviolet, isVelvetStyle, isCyberpunk } = useTheme();
 
   useEffect(() => {
     prefetchRouteChunks();
@@ -182,7 +182,7 @@ const AppContent: React.FC = () => {
         {/* Center Main Stage */}
         <main
           className={`flex-1 rounded-2xl overflow-hidden flex flex-col relative pb-[calc(112px+var(--safe-bottom,0px))] md:pb-0 ${
-            isVelvetStyle || isUltraviolet
+            isVelvetStyle || isUltraviolet || isCyberpunk
               ? 'bg-transparent'
               : isLiquidGlass
               ? 'glass-panel'

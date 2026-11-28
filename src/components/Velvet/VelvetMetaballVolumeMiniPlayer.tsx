@@ -181,6 +181,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
     lastVolumeInteractionTime: 0,
     autoSeparateDelayMs: 2600,
     causticPhase: 0,
+    lastFrameTime: typeof performance !== 'undefined' ? performance.now() : 0,
 
     basePillW: BASE_PILL_W,
     expandedPillW: EXPANDED_PILL_W,
@@ -231,15 +232,26 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
     let rafId = 0;
 
     const schedule = () => {
-      if (!rafId) rafId = requestAnimationFrame(tick);
+      if (!rafId && !document.hidden) {
+        phys.current.lastFrameTime = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
     };
     wakePhysicsRef.current = schedule;
 
+    const onVisibility = () => {
+      if (!document.hidden) schedule();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     const tick = (now: number) => {
       rafId = 0;
+      if (document.hidden) return;
       const s = phys.current;
+      const dtScale = Math.min(2.2, Math.max(0.35, (now - s.lastFrameTime) / 16.6667));
+      s.lastFrameTime = now;
       const k = stiffness;
-      const damping = 0.77;
+      const damping = Math.pow(0.77, dtScale);
 
       const dx = s.sX - s.pX;
       const dy = s.sY - s.pY;
@@ -335,20 +347,20 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
         }
       }
 
-      s.pVx = (s.pVx + (pTargetX - s.pX) * (k * 0.9)) * damping;
-      s.pVy = (s.pVy + (pTargetY - s.pY) * (k * 0.9)) * damping;
-      s.pX += s.pVx;
-      s.pY += s.pVy;
+      s.pVx = (s.pVx + (pTargetX - s.pX) * (k * 0.9) * dtScale) * damping;
+      s.pVy = (s.pVy + (pTargetY - s.pY) * (k * 0.9) * dtScale) * damping;
+      s.pX += s.pVx * dtScale;
+      s.pY += s.pVy * dtScale;
 
       const activeK = s.isDraggingDroplet ? Math.min(0.42, k * 2.1) : k;
-      const activeDamp = s.isDraggingDroplet ? 0.68 : damping;
+      const activeDamp = s.isDraggingDroplet ? Math.pow(0.68, dtScale) : damping;
       const forceX = (s.sTargetX - s.sX) * activeK + tensionPullX;
       const forceY = (s.sTargetY - s.sY) * activeK + tensionPullY;
 
-      s.sVx = (s.sVx + forceX) * activeDamp;
-      s.sVy = (s.sVy + forceY) * activeDamp;
-      s.sX += s.sVx;
-      s.sY += s.sVy;
+      s.sVx = (s.sVx + forceX * dtScale) * activeDamp;
+      s.sVy = (s.sVy + forceY * dtScale) * activeDamp;
+      s.sX += s.sVx * dtScale;
+      s.sY += s.sVy * dtScale;
 
       // Smooth Dynamic Width Morphing & Stage Centering
       const targetPillW = s.basePillW + (s.expandedPillW - s.basePillW) * dissolveCurve;
@@ -465,6 +477,7 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
     wakePhysicsRef.current();
     return () => {
       wakePhysicsRef.current = null;
+      document.removeEventListener('visibilitychange', onVisibility);
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);

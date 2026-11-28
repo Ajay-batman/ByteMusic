@@ -331,21 +331,28 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     let rafId = 0;
 
     const schedule = () => {
-      if (!rafId) {
+      if (!rafId && !document.hidden) {
         phys.current.lastFrameTime = performance.now();
         rafId = requestAnimationFrame(tick);
       }
     };
     wakePhysicsRef.current = schedule;
 
+    const onVisibility = () => {
+      if (!document.hidden) schedule();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     const tick = (now: number) => {
       rafId = 0;
+      if (document.hidden) return;
       const s = phys.current;
       const dt = Math.min(0.05, (now - s.lastFrameTime) / 1000);
+      const dtScale = Math.min(2.2, Math.max(0.35, dt / 0.0166667));
       s.lastFrameTime = now;
 
       const k = s.stiffness;
-      const damping = 0.76;
+      const damping = Math.pow(0.76, dtScale);
 
       // 1. Playback Progress Smoothing & Disc Rotation
       if (s.isPlaying) {
@@ -365,7 +372,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
       }
 
       // 2. Live Frequency Visualizer Bars
-      s.vizPhase += s.isPlaying ? 0.14 : 0.025;
+      s.vizPhase += (s.isPlaying ? 0.14 : 0.025) * dtScale;
       for (let i = 0; i < 16; i++) {
         const barEl = vizBarsRef.current[i];
         if (barEl) {
@@ -522,6 +529,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     wakePhysicsRef.current();
     return () => {
       wakePhysicsRef.current = null;
+      document.removeEventListener('visibilitychange', onVisibility);
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);

@@ -131,8 +131,6 @@ const TrackRow: React.FC<{
       style={
         isSpatialGlass
           ? {
-              backdropFilter: 'blur(14px) saturate(175%)',
-              WebkitBackdropFilter: 'blur(14px) saturate(175%)',
               boxShadow: isFrost
                 ? 'inset 0 1px 1px rgba(255,255,255,0.9), 0 4px 12px -4px rgba(15,23,42,0.06)'
                 : 'inset 0 1px 1px rgba(255,255,255,0.22), 0 6px 16px -6px rgba(0,0,0,0.3)',

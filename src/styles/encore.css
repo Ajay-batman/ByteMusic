@@ -489,11 +489,6 @@ body {
     0 0 24px rgba(168, 85, 247, 0.15) !important;
 }
 
-.neon-magenta-btn {
-  background: linear-gradient(135deg, #d946ef 0%, #a855f7 100%) !important;
-  box-shadow: 0 0 20px rgba(217, 70, 239, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
-}
-
 .cosmic-now-playing-bg {
   background-color: #0b071a !important;
   background-image: 
