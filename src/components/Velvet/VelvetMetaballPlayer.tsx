@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   SkipBack,
   Play,
@@ -45,6 +45,64 @@ interface VelvetMetaballFullPlayerProps {
 }
 
 /**
+ * Isolated 4Hz progress subscriber so VelvetMetaballFullPlayer never re-renders
+ * on every playback progress tick.
+ */
+const VelvetProgressSync: React.FC<{
+  physRef: React.MutableRefObject<{
+    targetProgress: number;
+    durationSec: number;
+  }>;
+  wakePhysicsRef: React.MutableRefObject<(() => void) | null>;
+  fallbackDurationMs: number;
+  scrubWidth: number;
+  scrubDisplaySec: number | null;
+  bpm: number;
+  isFrost: boolean;
+}> = React.memo(
+  ({
+    physRef,
+    wakePhysicsRef,
+    fallbackDurationMs,
+    scrubWidth,
+    scrubDisplaySec,
+    bpm,
+    isFrost,
+  }) => {
+    const { progressMs, durationMs } = usePlaybackProgress();
+    const effectiveDurationSec =
+      (durationMs > 0 ? durationMs : fallbackDurationMs || 180000) / 1000;
+    const liveProgressRatio =
+      durationMs > 0 ? Math.min(1, Math.max(0, progressMs / durationMs)) : 0;
+
+    useEffect(() => {
+      physRef.current.durationSec = effectiveDurationSec;
+      physRef.current.targetProgress = liveProgressRatio;
+      wakePhysicsRef.current?.();
+    }, [effectiveDurationSec, liveProgressRatio, physRef, wakePhysicsRef]);
+
+    const displayedSeconds =
+      scrubDisplaySec !== null ? scrubDisplaySec : Math.floor(progressMs / 1000);
+
+    return (
+      <div
+        style={{ width: scrubWidth }}
+        className={`flex items-center justify-between text-[11px] font-mono font-semibold mt-0.5 ${
+          isFrost ? 'text-slate-600' : 'text-white/70'
+        }`}
+      >
+        <span>{formatTimeSeconds(displayedSeconds)}</span>
+        <span className="flex items-center gap-1 opacity-75">
+          <Volume2 className="w-3 h-3" />
+          {bpm} BPM
+        </span>
+        <span>-{formatTimeSeconds(Math.max(0, effectiveDurationSec - displayedSeconds))}</span>
+      </div>
+    );
+  }
+);
+
+/**
  * Full-card & mobile Now Playing experience faithfully implementing
  * ios_liquid_glass_metaball_music_player.tsx backed by live ByteMusic playback & library state.
  */
@@ -62,7 +120,6 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     nextTrack,
     prevTrack,
   } = usePlayback();
-  const { progressMs, durationMs } = usePlaybackProgress();
   const { isLiked, toggleLike } = useLibrary();
   const { isAurora, isFrost, isSunset, isVelvetLime } = useTheme();
 
@@ -162,10 +219,8 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
   });
   actionsRef.current = { togglePlay, nextTrack, prevTrack, toggleLike, seek, currentTrack };
 
-  const effectiveDurationSec =
-    (durationMs > 0 ? durationMs : currentTrack?.duration.milliseconds || 180000) / 1000;
-  const liveProgressRatio =
-    durationMs > 0 ? Math.min(1, Math.max(0, progressMs / durationMs)) : 0;
+  const effectiveDurationSec = (currentTrack?.duration.milliseconds || 180000) / 1000;
+  const liveProgressRatio = 0;
 
   // Mutable 60fps Physics State
   const phys = useRef({
@@ -255,16 +310,6 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     phys.current.isPlaying = isPlaying;
     wakePhysicsRef.current?.();
   }, [isPlaying]);
-
-  useEffect(() => {
-    phys.current.durationSec = effectiveDurationSec;
-    wakePhysicsRef.current?.();
-  }, [effectiveDurationSec]);
-
-  useEffect(() => {
-    phys.current.targetProgress = liveProgressRatio;
-    wakePhysicsRef.current?.();
-  }, [liveProgressRatio]);
 
   // Trigger subtle card jiggle when track changes externally
   const prevTrackIdRef = useRef(currentTrack?.id);
@@ -563,7 +608,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
     phys.current.thumbScaleVx += 0.24;
     phys.current.thumbScaleVy -= 0.18;
     setScrubDisplaySec(null);
-    seek(ratio * (durationMs > 0 ? durationMs : currentTrack.duration.milliseconds));
+    seek(ratio * (phys.current.durationSec * 1000 || currentTrack.duration.milliseconds));
   };
 
   // Transport Dock Drag-Scrub Support (captures > 6px so clicks always fire cleanly without double-toggle)
@@ -636,7 +681,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
   ];
 
   const displayedSeconds =
-    scrubDisplaySec !== null ? scrubDisplaySec : Math.floor(progressMs / 1000);
+    scrubDisplaySec !== null ? scrubDisplaySec : Math.round(phys.current.progress * effectiveDurationSec);
 
   const isLight = isFrost;
   const [dragY, setDragY] = useState(0);
@@ -944,7 +989,7 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
                 {currentTrack.name}
               </h1>
               <p className={`text-xs font-medium mt-0.5 truncate px-2 ${isFrost ? 'text-slate-600' : 'text-white/65'}`}>
-                {currentTrack.artists.map((a) => a.name).join(', ')} • Lossless Audio
+                {currentTrack.artists.map((a) => a.name).join(', ')} â€¢ Lossless Audio
               </p>
 
               {/* 16-Bar Live Audio Visualizer */}
@@ -1018,18 +1063,16 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
                 </div>
               </div>
 
-              {/* Elapsed, BPM & Remaining Timestamps */}
-              <div
-                style={{ width: SCRUB_WIDTH }}
-                className={`flex items-center justify-between text-[11px] font-mono font-semibold mt-0.5 ${isFrost ? 'text-slate-600' : 'text-white/70'}`}
-              >
-                <span>{formatTimeSeconds(displayedSeconds)}</span>
-                <span className="flex items-center gap-1 opacity-75">
-                  <Volume2 className="w-3 h-3" />
-                  {currentTrack.bpm || 116} BPM
-                </span>
-                <span>-{formatTimeSeconds(Math.max(0, effectiveDurationSec - displayedSeconds))}</span>
-              </div>
+              {/* Elapsed, BPM & Remaining Timestamps (isolated 4Hz subscriber) */}
+              <VelvetProgressSync
+                physRef={phys}
+                wakePhysicsRef={wakePhysicsRef}
+                fallbackDurationMs={currentTrack.duration.milliseconds}
+                scrubWidth={SCRUB_WIDTH}
+                scrubDisplaySec={scrubDisplaySec}
+                bpm={currentTrack.bpm || 116}
+                isFrost={isFrost}
+              />
             </div>
           </div>
         </div>
@@ -1268,692 +1311,3 @@ export const VelvetMetaballFullPlayer: React.FC<VelvetMetaballFullPlayerProps> =
   );
 };
 
-interface VelvetMetaballBottomBarProps {
-  onOpenNowPlaying?: () => void;
-}
-
-/**
- * Desktop Persistent Bottom Bar for Velvet & Lime theme, powered by the exact same
- * Liquid Glass Metaball Scrubber & 4-button Metaball Transport Dock.
- */
-export const VelvetMetaballBottomBar: React.FC<VelvetMetaballBottomBarProps> = ({
-  onOpenNowPlaying,
-}) => {
-  const filterId = useId().replace(/:/g, '');
-  const {
-    currentTrack,
-    isPlaying,
-    isLoading,
-    volume,
-    isMuted,
-    audioQuality,
-    setAudioQuality,
-    togglePlay,
-    seek,
-    setVolume,
-    toggleMute,
-    nextTrack,
-    prevTrack,
-  } = usePlayback();
-  const { progressMs, durationMs } = usePlaybackProgress();
-  const { isLiked, toggleLike } = useLibrary();
-
-  const [activeControlIndex, setActiveControlIndex] = useState(1);
-  const [showQualityMenu, setShowQualityMenu] = useState(false);
-  const [scrubDisplaySec, setScrubDisplaySec] = useState<number | null>(null);
-
-  const viscosity = 13;
-  const stiffness = 0.15;
-  const specular = 0.75;
-
-  const BTN_SIZE = 40;
-  const BTN_GAP = 10;
-  const DOCK_PAD = 5;
-  const DOCK_STEP = BTN_SIZE + BTN_GAP; // 50px
-  const DOCK_WIDTH = DOCK_PAD * 2 + 4 * BTN_SIZE + 3 * BTN_GAP; // 200px
-  const DOCK_HEIGHT = BTN_SIZE + DOCK_PAD * 2; // 50px
-
-  const SCRUB_WIDTH = 300;
-  const SCRUB_HEIGHT = 8;
-  const THUMB_SIZE = 20;
-  const SCRUB_HALF_SPAN = (SCRUB_WIDTH - THUMB_SIZE) / 2;
-
-  const getDockSlotX = (idx: number) => {
-    const startCenter = -DOCK_WIDTH / 2 + DOCK_PAD + BTN_SIZE / 2;
-    return startCenter + idx * DOCK_STEP;
-  };
-
-  const wakePhysicsRef = useRef<(() => void) | null>(null);
-  const discRef = useRef<HTMLDivElement>(null);
-  const scrubThumbGooRef = useRef<HTMLDivElement>(null);
-  const scrubThumbGlassRef = useRef<HTMLDivElement>(null);
-  const dockTrackGooRef = useRef<HTMLDivElement>(null);
-  const dockGlassRef = useRef<HTMLDivElement>(null);
-  const dockDropletGooRef = useRef<HTMLDivElement>(null);
-  const dockDropletGlassRef = useRef<HTMLDivElement>(null);
-  const slotGooRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const suppressDockClickRef = useRef(false);
-
-  const actionsRef = useRef({ togglePlay, nextTrack, prevTrack, toggleLike, currentTrack });
-  actionsRef.current = { togglePlay, nextTrack, prevTrack, toggleLike, currentTrack };
-
-  const effectiveDurationSec =
-    (durationMs > 0 ? durationMs : currentTrack?.duration.milliseconds || 180000) / 1000;
-  const liveProgressRatio =
-    durationMs > 0 ? Math.min(1, Math.max(0, progressMs / durationMs)) : 0;
-
-  const phys = useRef({
-    discAngle: 0,
-    progress: liveProgressRatio,
-    targetProgress: liveProgressRatio,
-    thumbX: -SCRUB_HALF_SPAN + liveProgressRatio * (SCRUB_HALF_SPAN * 2),
-    thumbVx: 0,
-    thumbScaleX: 1,
-    thumbScaleY: 1,
-    thumbScaleVx: 0,
-    thumbScaleVy: 0,
-    isScrubbing: false,
-
-    dX: getDockSlotX(1),
-    dVx: 0,
-    dTargetX: getDockSlotX(1),
-    dScaleX: 1,
-    dScaleY: 1,
-    dScaleVx: 0,
-    dScaleVy: 0,
-    isDockDragging: false,
-    dockDragOffsetX: 0,
-    dockPointerDownX: null as number | null,
-
-    dockPX: 0,
-    dockPVx: 0,
-    dockPScaleX: 1,
-    dockPScaleY: 1,
-    dockPScaleVx: 0,
-    dockPScaleVy: 0,
-    slotScales: [1, 1, 1, 1],
-    slotVels: [0, 0, 0, 0],
-    wasFusedSlot: 1,
-    lastFrameTime: performance.now(),
-    isPlaying,
-    durationSec: effectiveDurationSec,
-  });
-
-  useEffect(() => {
-    phys.current.isPlaying = isPlaying;
-    wakePhysicsRef.current?.();
-  }, [isPlaying]);
-
-  useEffect(() => {
-    phys.current.durationSec = effectiveDurationSec;
-    wakePhysicsRef.current?.();
-  }, [effectiveDurationSec]);
-
-  useEffect(() => {
-    phys.current.targetProgress = liveProgressRatio;
-    wakePhysicsRef.current?.();
-  }, [liveProgressRatio]);
-
-  useEffect(() => {
-    let rafId = 0;
-    const schedule = () => {
-      if (!rafId) {
-        phys.current.lastFrameTime = performance.now();
-        rafId = requestAnimationFrame(tick);
-      }
-    };
-    wakePhysicsRef.current = schedule;
-
-    const tick = (now: number) => {
-      rafId = 0;
-      const s = phys.current;
-      const dt = Math.min(0.05, (now - s.lastFrameTime) / 1000);
-      s.lastFrameTime = now;
-
-      if (s.isPlaying) {
-        s.discAngle = (s.discAngle + dt * 28) % 360;
-      }
-      if (!s.isScrubbing) {
-        if (s.isPlaying && s.durationSec > 0) {
-          s.progress += dt / s.durationSec;
-        }
-        s.progress += (s.targetProgress - s.progress) * 0.22;
-        s.progress = Math.max(0, Math.min(1, s.progress));
-      }
-      if (discRef.current) {
-        discRef.current.style.transform = `rotate(${s.discAngle.toFixed(2)}deg)`;
-      }
-
-      // Scrubber physics
-      const targetThumbX = -SCRUB_HALF_SPAN + s.progress * (SCRUB_HALF_SPAN * 2);
-      const scrubK = s.isScrubbing ? 0.44 : 0.2;
-      const scrubDamp = s.isScrubbing ? 0.66 : 0.74;
-      s.thumbVx = (s.thumbVx + (targetThumbX - s.thumbX) * scrubK) * scrubDamp;
-      s.thumbX += s.thumbVx;
-      const thumbStretch = Math.min(Math.abs(s.thumbVx) * 0.032, 0.42) + (s.isScrubbing ? 0.12 : 0);
-      s.thumbScaleVx = (s.thumbScaleVx + (1 + thumbStretch - s.thumbScaleX) * 0.25) * 0.72;
-      s.thumbScaleVy = (s.thumbScaleVy + (1 - thumbStretch * 0.36 - s.thumbScaleY) * 0.25) * 0.72;
-      s.thumbScaleX += s.thumbScaleVx;
-      s.thumbScaleY += s.thumbScaleVy;
-      const thumbTransform = `translate3d(${s.thumbX.toFixed(2)}px, 0, 0) scale(${s.thumbScaleX.toFixed(
-        4
-      )}, ${s.thumbScaleY.toFixed(4)})`;
-      if (scrubThumbGooRef.current) scrubThumbGooRef.current.style.transform = thumbTransform;
-      if (scrubThumbGlassRef.current) scrubThumbGlassRef.current.style.transform = thumbTransform;
-
-      // Dock metaball physics
-      const dx = s.dTargetX - s.dX;
-      const dist = Math.abs(dx);
-      const tensionPull = !s.isDockDragging && dist < 34 && dist > 0.1 ? dx * 0.15 : 0;
-      const activeK = s.isDockDragging ? 0.34 : stiffness;
-      const activeDamp = s.isDockDragging ? 0.68 : 0.76;
-      s.dVx = (s.dVx + dx * activeK + tensionPull) * activeDamp;
-      s.dX += s.dVx;
-
-      let nearestIdx = 0;
-      let nearestDist = Infinity;
-      for (let i = 0; i < 4; i++) {
-        const dSlot = Math.abs(s.dX - getDockSlotX(i));
-        if (dSlot < nearestDist) {
-          nearestDist = dSlot;
-          nearestIdx = i;
-        }
-      }
-
-      const bridgeThreshold = 34 + viscosity * 0.6;
-      const isFused = nearestDist < bridgeThreshold;
-      const currentFusedSlot = isFused ? nearestIdx : -1;
-      if (currentFusedSlot !== s.wasFusedSlot) {
-        if (s.wasFusedSlot !== -1) s.slotVels[s.wasFusedSlot] += 0.14;
-        if (currentFusedSlot !== -1) {
-          s.slotVels[currentFusedSlot] -= 0.16;
-          s.dScaleVx -= 0.12;
-          s.dScaleVy += 0.1;
-        }
-        s.wasFusedSlot = currentFusedSlot;
-      }
-
-      const dSpeed = Math.abs(s.dVx);
-      const velStretch = Math.min(dSpeed * 0.022, 0.34);
-      const bridgeStretch =
-        !isFused && nearestDist < bridgeThreshold + 14 ? 0.16 : Math.min(dist / DOCK_STEP, 1) * 0.14;
-      s.dScaleVx = (s.dScaleVx + (1 + velStretch + bridgeStretch - s.dScaleX) * 0.24) * 0.72;
-      s.dScaleVy =
-        (s.dScaleVy + (1 - (velStretch + bridgeStretch) * 0.42 - s.dScaleY) * 0.24) * 0.72;
-      s.dScaleX += s.dScaleVx;
-      s.dScaleY += s.dScaleVy;
-
-      for (let i = 0; i < 4; i++) {
-        const slotX = getDockSlotX(i);
-        const proximity = Math.max(0, 1 - Math.abs(s.dX - slotX) / bridgeThreshold);
-        s.slotVels[i] = (s.slotVels[i] + (1 + proximity * 0.12 - s.slotScales[i]) * 0.24) * 0.72;
-        s.slotScales[i] += s.slotVels[i];
-        const slotEl = slotGooRefs.current[i];
-        if (slotEl) {
-          slotEl.style.transform = `translate3d(${slotX}px, 0, 0) scale(${s.slotScales[i].toFixed(4)})`;
-        }
-      }
-
-      s.dockPVx = (s.dockPVx + (0 - s.dockPX) * 0.18) * 0.74;
-      s.dockPX += s.dockPVx;
-      s.dockPScaleVx = (s.dockPScaleVx + (1 - s.dockPScaleX) * 0.22) * 0.74;
-      s.dockPScaleVy = (s.dockPScaleVy + (1 - s.dockPScaleY) * 0.22) * 0.74;
-      s.dockPScaleX += s.dockPScaleVx;
-      s.dockPScaleY += s.dockPScaleVy;
-
-      const dockTrackTransform = `translate3d(${s.dockPX.toFixed(2)}px, 0, 0) scale(${s.dockPScaleX.toFixed(
-        4
-      )}, ${s.dockPScaleY.toFixed(4)})`;
-      const dockDropletTransform = `translate3d(${s.dX.toFixed(2)}px, 0, 0) scale(${s.dScaleX.toFixed(
-        4
-      )}, ${s.dScaleY.toFixed(4)})`;
-
-      if (dockTrackGooRef.current) dockTrackGooRef.current.style.transform = dockTrackTransform;
-      if (dockGlassRef.current) dockGlassRef.current.style.transform = dockTrackTransform;
-      if (dockDropletGooRef.current) dockDropletGooRef.current.style.transform = dockDropletTransform;
-      if (dockDropletGlassRef.current) dockDropletGlassRef.current.style.transform = dockDropletTransform;
-
-      const settled =
-        !s.isPlaying &&
-        !s.isScrubbing &&
-        !s.isDockDragging &&
-        Math.abs(s.targetProgress - s.progress) < 0.0005 &&
-        Math.abs(s.thumbVx) < 0.02 &&
-        Math.abs(s.dTargetX - s.dX) < 0.08 &&
-        Math.abs(s.dVx) < 0.02 &&
-        Math.abs(s.dScaleX - 1) < 0.002;
-      if (!settled) {
-        rafId = requestAnimationFrame(tick);
-      }
-    };
-
-    wakePhysicsRef.current();
-    return () => {
-      wakePhysicsRef.current = null;
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, []);
-
-  if (!currentTrack) return null;
-
-  const isCurrentLiked = isLiked(currentTrack.id);
-  const contrast = Math.round(18 + viscosity * 0.45);
-  const shift = -(contrast * 0.42).toFixed(2);
-  const displayedSeconds =
-    scrubDisplaySec !== null ? scrubDisplaySec : Math.floor(progressMs / 1000);
-
-  const triggerControlAction = (index: number) => {
-    const s = phys.current;
-    const prevX = s.dX;
-    const nextX = getDockSlotX(index);
-    const dir = Math.sign(nextX - prevX) || 1;
-    setActiveControlIndex(index);
-    s.dTargetX = nextX;
-    s.dScaleVx += 0.18;
-    s.dScaleVy -= 0.13;
-    s.dockPVx += dir * 1.4;
-    s.dockPScaleVx += 0.02;
-    s.dockPScaleVy -= 0.014;
-
-    if (index === 0) actionsRef.current.prevTrack();
-    else if (index === 1) actionsRef.current.togglePlay();
-    else if (index === 2) actionsRef.current.nextTrack();
-    else if (index === 3 && actionsRef.current.currentTrack) {
-      actionsRef.current.toggleLike(actionsRef.current.currentTrack);
-    }
-    wakePhysicsRef.current?.();
-  };
-
-  const updateProgressFromClientX = (clientX: number, rect: DOMRect) => {
-    const centerX = rect.left + rect.width / 2;
-    const relX = Math.max(-SCRUB_HALF_SPAN, Math.min(SCRUB_HALF_SPAN, clientX - centerX));
-    const ratio = (relX + SCRUB_HALF_SPAN) / (SCRUB_HALF_SPAN * 2);
-    phys.current.progress = ratio;
-    phys.current.targetProgress = ratio;
-    setScrubDisplaySec(ratio * effectiveDurationSec);
-    return ratio;
-  };
-
-  const handleDockPointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    phys.current.dockPointerDownX = e.clientX;
-    phys.current.dockDragOffsetX = e.clientX - phys.current.dX;
-  };
-
-  const handleDockPointerMove = (e: React.PointerEvent<HTMLElement>) => {
-    if (phys.current.dockPointerDownX === null) return;
-    const moved = Math.abs(e.clientX - phys.current.dockPointerDownX);
-    if (!phys.current.isDockDragging && moved > 6) {
-      phys.current.isDockDragging = true;
-      try {
-        e.currentTarget.setPointerCapture?.(e.pointerId);
-      } catch {}
-    }
-    if (phys.current.isDockDragging) {
-      const rawX = e.clientX - phys.current.dockDragOffsetX;
-      phys.current.dTargetX = Math.max(getDockSlotX(0), Math.min(getDockSlotX(3), rawX));
-    }
-  };
-
-  const handleDockPointerUp = () => {
-    const wasDragging = phys.current.isDockDragging;
-    phys.current.isDockDragging = false;
-    phys.current.dockPointerDownX = null;
-    if (wasDragging) {
-      suppressDockClickRef.current = true;
-      setTimeout(() => {
-        suppressDockClickRef.current = false;
-      }, 60);
-
-      let nearestIdx = 0;
-      let minDist = Infinity;
-      for (let i = 0; i < 4; i++) {
-        const d = Math.abs(phys.current.dX - getDockSlotX(i));
-        if (d < minDist) {
-          minDist = d;
-          nearestIdx = i;
-        }
-      }
-      triggerControlAction(nearestIdx);
-    }
-  };
-
-  const controlButtons = [
-    { id: 'prev', label: 'Previous Track', icon: SkipBack },
-    { id: 'play', label: isPlaying ? 'Pause' : 'Play', icon: isPlaying ? Pause : Play },
-    { id: 'next', label: 'Next Track', icon: SkipForward },
-    { id: 'like', label: isCurrentLiked ? 'Unlike Track' : 'Like Track', icon: Heart },
-  ];
-
-  return (
-    <footer className="mx-4 mb-3 rounded-[28px] border border-white/25 bg-white/[0.04] backdrop-blur-2xl h-22 py-2 px-5 grid grid-cols-[1fr_2fr_1fr] items-center shadow-[0_24px_52px_-12px_rgba(0,0,0,0.65)] z-50 select-none relative overflow-visible">
-      {/* SVG Filter */}
-      <svg className="sr-only" width="0" height="0" aria-hidden="true">
-        <defs>
-          <filter id={`liquid-fusion-bar-${filterId}`} x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation={10} result="blur" />
-            <feColorMatrix
-              in="blur"
-              mode="matrix"
-              values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${contrast} ${shift}`}
-              result="goo"
-            />
-            <feComposite in="goo" in2="goo" operator="in" />
-          </filter>
-        </defs>
-      </svg>
-
-      {/* Left: Rotating Spatial Vinyl Disc & Track Info */}
-      <div className="flex items-center gap-3.5 min-w-0">
-        <div
-          onClick={onOpenNowPlaying}
-          title="Open Liquid Glass Music Player"
-          className="relative flex-shrink-0 cursor-pointer group"
-        >
-          <div className="absolute -inset-1 rounded-full bg-fuchsia-500/35 blur-md opacity-75 group-hover:opacity-100 transition-opacity" />
-          <div
-            ref={discRef}
-            className="relative w-12 h-12 rounded-full bg-gradient-to-tr from-rose-400 via-amber-300 to-fuchsia-500 p-0.5 shadow-lg flex items-center justify-center"
-          >
-            <div className="w-full h-full rounded-full overflow-hidden relative bg-slate-950/75 flex items-center justify-center">
-              {currentTrack.album.images[0] && (
-                <img
-                  src={currentTrack.album.images[0].url}
-                  alt={currentTrack.name}
-                  className="absolute inset-0 w-full h-full object-cover opacity-70"
-                />
-              )}
-              <Disc3 className="w-5 h-5 text-white relative z-10 drop-shadow" />
-            </div>
-          </div>
-        </div>
-
-        <div
-          onClick={onOpenNowPlaying}
-          title="Open Liquid Glass Music Player"
-          className="flex flex-col truncate cursor-pointer"
-        >
-          <span className="text-sm font-bold text-white hover:underline truncate">
-            {currentTrack.name}
-          </span>
-          <span className="text-xs text-white/60 hover:text-white truncate">
-            {currentTrack.artists.map((a) => a.name).join(', ')}
-          </span>
-        </div>
-        <DownloadButton track={currentTrack} size={18} className="ml-1" />
-      </div>
-
-      {/* Center: Metaball Transport Control Dock + Metaball Scrubber */}
-      <div className="flex flex-col items-center justify-center gap-1">
-        {/* Compact 4-Button Metaball Transport Dock */}
-        <nav
-          aria-label="Playback Transport Controls"
-          onPointerDown={handleDockPointerDown}
-          onPointerMove={handleDockPointerMove}
-          onPointerUp={handleDockPointerUp}
-          onPointerCancel={handleDockPointerUp}
-          style={{ width: DOCK_WIDTH, height: DOCK_HEIGHT }}
-          className="relative flex items-center justify-center touch-none"
-        >
-          <div
-            style={{ filter: `url(#liquid-fusion-bar-${filterId})` }}
-            className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.16]"
-          >
-            <div
-              ref={dockTrackGooRef}
-              style={{ width: DOCK_WIDTH, height: DOCK_HEIGHT }}
-              className="absolute rounded-full bg-white"
-            />
-            {controlButtons.map((btn, idx) => (
-              <div
-                key={btn.id}
-                ref={(el) => {
-                  slotGooRefs.current[idx] = el;
-                }}
-                style={{
-                  width: BTN_SIZE * 0.84,
-                  height: BTN_SIZE * 0.84,
-                  transform: `translate3d(${getDockSlotX(idx)}px, 0, 0)`,
-                }}
-                className="absolute rounded-full bg-white"
-              />
-            ))}
-            <div
-              ref={dockDropletGooRef}
-              style={{ width: BTN_SIZE, height: BTN_SIZE }}
-              className="absolute rounded-full bg-white"
-            />
-          </div>
-
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div
-              ref={dockGlassRef}
-              style={{
-                width: DOCK_WIDTH,
-                height: DOCK_HEIGHT,
-                backdropFilter: 'blur(12px) saturate(145%)',
-                WebkitBackdropFilter: 'blur(12px) saturate(145%)',
-                boxShadow: `inset 0 1.5px 1.5px rgba(255,255,255,${specular}), inset 0 -1.5px 2px rgba(255,255,255,${
-                  specular * 0.3
-                })`,
-              }}
-              className="absolute rounded-full overflow-hidden border border-white/30 bg-white/[0.04]"
-            >
-              <div
-                className="w-full h-full opacity-45 bg-gradient-to-tr from-cyan-400/20 via-transparent to-fuchsia-400/20"
-              />
-            </div>
-            <div
-              ref={dockDropletGlassRef}
-              style={{
-                width: BTN_SIZE,
-                height: BTN_SIZE,
-                backdropFilter: 'blur(12px) saturate(145%)',
-                WebkitBackdropFilter: 'blur(12px) saturate(145%)',
-                boxShadow: `inset 0 1.5px 1.5px rgba(255,255,255,0.9), 0 8px 18px -4px rgba(0,0,0,0.45)`,
-              }}
-              className="absolute rounded-full overflow-hidden border border-white/45 bg-white/15"
-            >
-              <div
-                className="w-full h-full opacity-55 bg-gradient-to-tr from-emerald-300/25 via-transparent to-cyan-200/30"
-              />
-            </div>
-          </div>
-
-          <div
-            style={{ gap: BTN_GAP, padding: DOCK_PAD }}
-            className="relative z-10 flex items-center justify-center"
-          >
-            {controlButtons.map((btn, idx) => {
-              const Icon = btn.icon;
-              const isSelected = activeControlIndex === idx;
-              const isHeartActive = btn.id === 'like' && isCurrentLiked;
-              return (
-                <button
-                  key={btn.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (suppressDockClickRef.current) {
-                      suppressDockClickRef.current = false;
-                      return;
-                    }
-                    triggerControlAction(idx);
-                  }}
-                  aria-label={btn.label}
-                  style={{ width: BTN_SIZE, height: BTN_SIZE }}
-                  className={`relative rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-90 ${
-                    isHeartActive
-                      ? 'text-rose-400 scale-110'
-                      : isSelected
-                      ? 'text-white scale-110'
-                      : 'text-white/65 hover:text-white'
-                  }`}
-                >
-                  {btn.id === 'play' && isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  ) : (
-                    <Icon
-                      className={`w-4 h-4 ${
-                        btn.id === 'play' && !isPlaying ? 'ml-0.5' : ''
-                      } ${isHeartActive ? 'fill-current' : ''}`}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-
-        {/* Metaball Scrubber Strip */}
-        <div className="flex items-center gap-2.5">
-          <span className="text-[11px] font-mono text-white/70 w-9 text-right">
-            {formatTimeSeconds(displayedSeconds)}
-          </span>
-          <div
-            role="slider"
-            tabIndex={0}
-            aria-label="Track Progress Scrubber"
-            aria-valuemin={0}
-            aria-valuemax={Math.round(effectiveDurationSec)}
-            aria-valuenow={Math.round(displayedSeconds)}
-            onPointerDown={(e) => {
-              e.currentTarget.setPointerCapture?.(e.pointerId);
-              phys.current.isScrubbing = true;
-              phys.current.thumbScaleVy -= 0.18;
-              updateProgressFromClientX(e.clientX, e.currentTarget.getBoundingClientRect());
-            }}
-            onPointerMove={(e) => {
-              if (!phys.current.isScrubbing) return;
-              updateProgressFromClientX(e.clientX, e.currentTarget.getBoundingClientRect());
-            }}
-            onPointerUp={(e) => {
-              if (!phys.current.isScrubbing) return;
-              const ratio = updateProgressFromClientX(
-                e.clientX,
-                e.currentTarget.getBoundingClientRect()
-              );
-              phys.current.isScrubbing = false;
-              phys.current.thumbScaleVx += 0.24;
-              phys.current.thumbScaleVy -= 0.18;
-              setScrubDisplaySec(null);
-              seek(ratio * (durationMs > 0 ? durationMs : currentTrack.duration.milliseconds));
-            }}
-            style={{ width: SCRUB_WIDTH, height: THUMB_SIZE + 4 }}
-            className="relative flex items-center justify-center cursor-pointer touch-none"
-          >
-            <div
-              style={{ filter: `url(#liquid-fusion-bar-${filterId})` }}
-              className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.28]"
-            >
-              <div
-                style={{ width: SCRUB_WIDTH, height: SCRUB_HEIGHT }}
-                className="absolute rounded-full bg-white"
-              />
-              <div
-                ref={scrubThumbGooRef}
-                style={{ width: THUMB_SIZE, height: THUMB_SIZE }}
-                className="absolute rounded-full bg-white"
-              />
-            </div>
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div
-                style={{ width: SCRUB_WIDTH, height: SCRUB_HEIGHT }}
-                className="absolute rounded-full border bg-white/15 border-white/30"
-              />
-              <div
-                ref={scrubThumbGlassRef}
-                style={{
-                  width: THUMB_SIZE,
-                  height: THUMB_SIZE,
-                  backdropFilter: 'blur(12px) saturate(185%)',
-                  WebkitBackdropFilter: 'blur(12px) saturate(185%)',
-                  boxShadow: `inset 0 1.5px 1px rgba(255,255,255,0.85), 0 4px 12px rgba(0,0,0,0.45)`,
-                }}
-                className="absolute rounded-full border bg-white/30 border-white/70"
-              />
-            </div>
-          </div>
-          <span className="text-[11px] font-mono text-white/70 w-10">
-            -{formatTimeSeconds(Math.max(0, effectiveDurationSec - displayedSeconds))}
-          </span>
-        </div>
-      </div>
-
-      {/* Right: Volume, Expand & Quality */}
-      <div className="flex items-center justify-end gap-3 text-white/75">
-        <button onClick={toggleMute} className="hover:text-white transition-colors">
-          {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-        </button>
-        <div className="w-24">
-          <LiquidGlassSlider
-            value={isMuted ? 0 : volume}
-            min={0}
-            max={1}
-            onChange={(newVol) => setVolume(newVol)}
-            formatTooltip={(vol) => `${Math.round(vol * 100)}%`}
-            accentColor="#ffffff"
-          />
-        </div>
-        <button
-          onClick={onOpenNowPlaying}
-          title="Expand Liquid Glass Player"
-          className="hover:text-white transition-all p-1.5 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer"
-        >
-          <Maximize2 size={16} />
-        </button>
-
-        <div className="relative">
-          <button
-            onClick={() => setShowQualityMenu((prev) => !prev)}
-            title="Audio Quality & Bitrate"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border border-white/15 bg-white/5 hover:bg-white/15 text-white transition-colors"
-          >
-            <Sliders size={13} />
-            <span>
-              {audioQuality === 'very_high'
-                ? '320k'
-                : audioQuality === 'high'
-                ? '256k'
-                : audioQuality === 'normal'
-                ? '160k'
-                : '96k'}
-            </span>
-          </button>
-
-          {showQualityMenu && (
-            <div className="absolute bottom-11 right-0 w-52 bg-[#161721]/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl p-1.5 text-xs z-50">
-              <div className="px-2.5 py-1.5 font-bold text-white border-b border-white/10 mb-1">
-                Audio Quality (Bitrate)
-              </div>
-              {[
-                { id: 'very_high', label: 'Very High', rate: '320 kbps' },
-                { id: 'high', label: 'High', rate: '256 kbps' },
-                { id: 'normal', label: 'Normal', rate: '160 kbps' },
-                { id: 'low', label: 'Low', rate: '96 kbps' },
-              ].map((q) => (
-                <button
-                  key={q.id}
-                  onClick={() => {
-                    setAudioQuality(q.id as AudioQuality);
-                    setShowQualityMenu(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left ${
-                    audioQuality === q.id
-                      ? 'bg-white/15 text-white font-bold'
-                      : 'text-white/75 hover:bg-white/10'
-                  }`}
-                >
-                  <span>{q.label}</span>
-                  <span className="flex items-center gap-1 opacity-75">
-                    {q.rate}
-                    {audioQuality === q.id && <Check size={13} />}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </footer>
-  );
-};

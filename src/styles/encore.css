@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /**
  * Spotify Encore Dark Theme Styles
  * Derived from Spotify Desktop xpui-snapshot.css & encore design system

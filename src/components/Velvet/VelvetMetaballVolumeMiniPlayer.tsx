@@ -74,7 +74,6 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
   } = usePlayback();
 
   const [isFusedUI, setIsFusedUI] = useState(false);
-  const [autoSeparateProgress, setAutoSeparateProgress] = useState(0);
 
   // Responsive geometry constants (fits compact micro phones, Galaxy A56 ~384-412px, and desktop cleanly)
   const [viewportW, setViewportW] = useState(() =>
@@ -115,6 +114,8 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
   const miniInfoRef = useRef<HTMLDivElement>(null);
   const artworkDiscRef = useRef<HTMLDivElement>(null);
   const bounceStageRef = useRef<HTMLDivElement>(null);
+  const countdownSvgRef = useRef<SVGSVGElement>(null);
+  const countdownCircleRef = useRef<SVGCircleElement>(null);
   const wakePhysicsRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -220,14 +221,14 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
     s.isAdjustingVolume = false;
     s.sTargetX = s.restOffsetX;
     s.sTargetY = 0;
-    setAutoSeparateProgress(0);
+    if (countdownSvgRef.current) countdownSvgRef.current.style.opacity = '0';
+    if (countdownCircleRef.current) countdownCircleRef.current.style.strokeDashoffset = '0';
     wakePhysicsRef.current?.();
   };
 
   // Main 60fps Liquid Glass Physics & Auto-Separation Loop (sleeps at rest)
   useEffect(() => {
     let rafId = 0;
-    let lastCountdownBroadcast = 0;
 
     const schedule = () => {
       if (!rafId) rafId = requestAnimationFrame(tick);
@@ -274,7 +275,8 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
         s.wasFused = false;
         s.isAdjustingVolume = false;
         setIsFusedUI(false);
-        setAutoSeparateProgress(0);
+        if (countdownSvgRef.current) countdownSvgRef.current.style.opacity = '0';
+        if (countdownCircleRef.current) countdownCircleRef.current.style.strokeDashoffset = '0';
 
         const snapImpulse = 0.18;
         s.pScaleVx += Math.abs(nx) * snapImpulse * 0.85;
@@ -288,20 +290,20 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
         }
       }
 
-      // Auto-Separation Countdown while Fused & Idle
+      // Auto-Separation Countdown while Fused & Idle (direct DOM updates, zero React re-renders)
       if (s.wasFused) {
         if (s.isDraggingDroplet || s.isAdjustingVolume) {
           s.lastVolumeInteractionTime = now;
-          if (now - lastCountdownBroadcast > 60) {
-            lastCountdownBroadcast = now;
-            setAutoSeparateProgress(0);
-          }
+          if (countdownSvgRef.current) countdownSvgRef.current.style.opacity = '0';
+          if (countdownCircleRef.current) countdownCircleRef.current.style.strokeDashoffset = '0';
         } else {
           const elapsed = now - s.lastVolumeInteractionTime;
           const ratio = Math.min(1, elapsed / s.autoSeparateDelayMs);
-          if (now - lastCountdownBroadcast > 50) {
-            lastCountdownBroadcast = now;
-            setAutoSeparateProgress(ratio);
+          if (countdownSvgRef.current) {
+            countdownSvgRef.current.style.opacity = ratio > 0 ? '1' : '0';
+          }
+          if (countdownCircleRef.current) {
+            countdownCircleRef.current.style.strokeDashoffset = (94.2 * ratio).toFixed(1);
           }
           if (elapsed >= s.autoSeparateDelayMs) {
             s.sTargetX = s.restOffsetX;
@@ -847,32 +849,33 @@ export const VelvetMetaballVolumeMiniPlayer: React.FC<VelvetMetaballVolumeMiniPl
             className="absolute rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing touch-none group"
           >
             {/* Auto-Separation Countdown Ring when Fused */}
-            {isFusedUI && autoSeparateProgress > 0 && (
-              <svg
-                className="pointer-events-none absolute w-11 h-11 -rotate-90"
-                viewBox="0 0 36 36"
-              >
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15"
-                  fill="none"
-                  stroke={isFrost ? 'rgba(15,23,42,0.15)' : 'rgba(255,255,255,0.15)'}
-                  strokeWidth="2"
-                />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15"
-                  fill="none"
-                  stroke={isFrost ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.82)'}
-                  strokeWidth="2"
-                  strokeDasharray="94.2"
-                  strokeDashoffset={(94.2 * autoSeparateProgress).toFixed(1)}
-                  strokeLinecap="round"
-                />
-              </svg>
-            )}
+            <svg
+              ref={countdownSvgRef}
+              style={{ opacity: 0 }}
+              className="pointer-events-none absolute w-11 h-11 -rotate-90 transition-opacity duration-150"
+              viewBox="0 0 36 36"
+            >
+              <circle
+                cx="18"
+                cy="18"
+                r="15"
+                fill="none"
+                stroke={isFrost ? 'rgba(15,23,42,0.15)' : 'rgba(255,255,255,0.15)'}
+                strokeWidth="2"
+              />
+              <circle
+                ref={countdownCircleRef}
+                cx="18"
+                cy="18"
+                r="15"
+                fill="none"
+                stroke={isFrost ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.82)'}
+                strokeWidth="2"
+                strokeDasharray="94.2"
+                strokeDashoffset="0"
+                strokeLinecap="round"
+              />
+            </svg>
 
             {/* Circular Icon Well Background (Dissolves smoothly when merged into main pill) */}
             <div

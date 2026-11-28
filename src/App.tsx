@@ -29,7 +29,25 @@ const RouteLoadingFallback: React.FC = () => (
   </div>
 );
 
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : true
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(min-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return isDesktop;
+}
+
 const AppContent: React.FC = () => {
+  const isDesktop = useIsDesktop();
   const [currentView, setCurrentView] = useState<AppView>('home');
   const [routeAnimKey, setRouteAnimKey] = useState<number>(0);
   const [routeAnimClass, setRouteAnimClass] = useState<string>('');
@@ -149,15 +167,17 @@ const AppContent: React.FC = () => {
         style={{ paddingTop: 'calc(6px + var(--safe-top, 0px))' }}
         className={`flex flex-1 overflow-hidden px-1.5 pb-1.5 sm:p-2 gap-2.5 z-10 ${isLiquidGlass ? 'pb-2' : ''}`}
       >
-        {/* Desktop Left Sidebar (Hidden on mobile) */}
-        <div className="hidden md:flex h-full">
-          <SidebarNav
-            currentView={currentView}
-            setCurrentView={navigateToView}
-            selectedPlaylist={selectedPlaylist}
-            setSelectedPlaylist={handleSelectPlaylist}
-          />
-        </div>
+        {/* Desktop Left Sidebar (Mounted only on desktop) */}
+        {isDesktop && (
+          <div className="flex h-full">
+            <SidebarNav
+              currentView={currentView}
+              setCurrentView={navigateToView}
+              selectedPlaylist={selectedPlaylist}
+              setSelectedPlaylist={handleSelectPlaylist}
+            />
+          </div>
+        )}
 
         {/* Center Main Stage */}
         <main
@@ -170,8 +190,8 @@ const AppContent: React.FC = () => {
           }`}
         >
           {/* Velvet & Spatial Responsive Desktop Navigation Bar */}
-          {isVelvetStyle && (
-            <div className="hidden md:flex justify-center pt-3.5 pb-1.5 px-4 flex-shrink-0 z-30 pointer-events-none">
+          {isDesktop && isVelvetStyle && (
+            <div className="flex justify-center pt-3.5 pb-1.5 px-4 flex-shrink-0 z-30 pointer-events-none">
               <VelvetMetaballNav currentView={currentView} setCurrentView={navigateToView} />
             </div>
           )}
@@ -208,14 +228,20 @@ const AppContent: React.FC = () => {
         </main>
       </div>
 
-      {/* Desktop Bottom Playback Controller (Hidden on mobile) */}
-      <div className="hidden md:block z-20">
-        <BottomPlayerBar onOpenNowPlaying={openMobilePlayer} />
-      </div>
+      {/* Desktop Bottom Playback Controller (Mounted only on desktop) */}
+      {isDesktop && (
+        <div className="z-20">
+          <BottomPlayerBar onOpenNowPlaying={openMobilePlayer} />
+        </div>
+      )}
 
-      {/* Mobile Mini Player & Bottom Navigation (Visible only on mobile) */}
-      <MobileMiniPlayer onOpenFullPlayer={openMobilePlayer} />
-      <MobileBottomNav currentView={currentView} setCurrentView={navigateToView} />
+      {/* Mobile Mini Player & Bottom Navigation (Mounted only on mobile) */}
+      {!isDesktop && (
+        <>
+          <MobileMiniPlayer onOpenFullPlayer={openMobilePlayer} />
+          <MobileBottomNav currentView={currentView} setCurrentView={navigateToView} />
+        </>
+      )}
 
       {/* Mobile Expandable Now Playing Screen */}
       {playerStage !== 'closed' && (

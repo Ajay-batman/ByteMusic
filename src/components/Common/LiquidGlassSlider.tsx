@@ -154,7 +154,7 @@ export const LiquidGlassSlider: React.FC<LiquidGlassSliderProps> = ({
         onPointerUp={handlePointerUp}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`group relative flex items-center h-4 cursor-pointer select-none ${className}`}
+        className={`group relative flex items-center h-4 cursor-pointer select-none touch-none ${className}`}
       >
         <div className="w-full h-1 bg-[#4d4d4d] group-hover:h-1.5 rounded-full relative transition-all overflow-hidden">
           <div

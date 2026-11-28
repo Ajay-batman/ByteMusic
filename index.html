@@ -15,7 +15,8 @@
     <meta name="apple-mobile-web-app-title" content="ByteMusic" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Urbanist:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
     <script>
       // Keep background audio active: override Page Visibility API
       try {
@@ -39,34 +40,7 @@
         window.addEventListener('freeze', function(e) { e.stopImmediatePropagation(); }, true);
       } catch (e) {}
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              velvet: ['"Plus Jakarta Sans"', 'Urbanist', 'sans-serif'],
-            },
-            colors: {
-              spotify: {
-                green: '#1db954',
-                dark: '#121212',
-                card: '#181818',
-                hover: '#282828',
-                subdued: '#b3b3b3',
-              },
-              velvet: {
-                lime: '#D2F843',
-                dark: '#0B0B12',
-                card: '#161623',
-                dock: 'rgba(22, 23, 33, 0.72)',
-              }
-            }
-          }
-        }
-      }
-    </script>
+    <script src="https://www.youtube.com/iframe_api" async defer></script>
   </head>
   <body class="bg-black text-white m-0 p-0 overflow-hidden">
     <div id="root"></div>
